@@ -12,7 +12,7 @@ import numpy as np
 class GliderCheck(BaseNCCheck):
     register_checker = True
     name = 'gliderdac'
-    
+
     @classmethod
     def beliefs(cls): 
         '''
@@ -211,8 +211,7 @@ class GliderCheck(BaseNCCheck):
             'source',
             'standard_name_vocabulary',
             'summary',
-            'title',
-            'wmo_id'
+            'title'
         ]
         level = BaseCheck.MEDIUM
         out_of = 0
@@ -236,6 +235,34 @@ class GliderCheck(BaseNCCheck):
                 messages.append('%s global attribute can not be empty' % field)
         
         return self.make_result(level, score, out_of, 'Required Global Attributes', messages)
+
+    def check_wmo(self, ds):
+        '''
+        Verifies that the data has a WMO ID but not necessarily filled out
+        '''
+        level = BaseCheck.MEDIUM
+        score = 0
+        out_of = 1
+        messages = []
+        test = hasattr(ds.dataset, 'wmo_id')
+        score += int(test)
+        if not test:
+            messages.append("WMO ID is a required attribute but can be empty if the dataset doesn't have a WMO ID")
+
+        return self.make_result(level, score, out_of, 'WMO ID', messages)
+
+    def check_summary(self, ds):
+        level = BaseCheck.MEDIUM
+        out_of = 1
+        score = 0
+        messages = []
+        if hasattr(ds.dataset, 'summary') and ds.dataset.summary:
+            score += 1
+        else:
+            messages.append('Dataset must define summary')
+        return self.make_result(level, score, out_of, 'Summary defined', messages)
+
+
 
     def check_primary_variable_attributes(self, ds):
         '''
@@ -519,7 +546,7 @@ class GliderCheck(BaseNCCheck):
             test = nc_var.dtype.str == '<f8'
             score += int(test)
             if not test:
-                messages.append('%s variable is incorrect data type')
+                messages.append('%s variable is incorrect data type' % var)
 
             for field in required_fields:
                 if not hasattr(nc_var, field):
