@@ -1,4 +1,4 @@
-from compliance_checker.glider_dac import GliderCheck
+from cc_plugin_glider.glider_dac import GliderCheck
 from pkg_resources import resource_filename
 from netCDF4 import Dataset
 from compliance_checker.base import DSPair
