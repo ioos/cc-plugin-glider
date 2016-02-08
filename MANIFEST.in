@@ -1,0 +1,8 @@
+include *.txt
+include README.md
+include LICENSE
+include cc_plugin_glider/data/*.json
+include cc_plugin_glider/data/*.xml
+include cc_plugin_glider/data/templates/*.j2
+include cc_plugin_glider/tests/data/*.nc
+include cc_plugin_glider/tests/data/non-comp/*.nc
