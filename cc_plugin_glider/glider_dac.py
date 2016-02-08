@@ -24,10 +24,10 @@ class GliderCheck(BaseNCCheck):
     def make_result(cls, level, score, out_of, name, messages):
         return Result(level, (score, out_of), name, messages)
 
-    def setup(self, ds):
+    def setup(self, dataset):
         pass
 
-    def check_locations(self, ds):
+    def check_locations(self, dataset):
         '''
         Validates that lat and lon are indeed variables
         '''
@@ -35,14 +35,14 @@ class GliderCheck(BaseNCCheck):
         out_of = 1
         score = 0
         messages = []
-        test = ('lat' in ds.dataset.variables and 'lon' in ds.dataset.variables)
+        test = ('lat' in dataset.variables and 'lon' in dataset.variables)
         if test:
             score += 1
         else:
             messages.append("lat and lon don't exist")
         return self.make_result(level, score, out_of, 'Verifies lat and lon are variables', messages)
 
-    def check_location_dimensions(self, ds):
+    def check_location_dimensions(self, dataset):
         '''
         Validates that lat and lon are valid timeseries variables
         '''
@@ -51,13 +51,13 @@ class GliderCheck(BaseNCCheck):
         score = 0
         messages = []
 
-        test = 'lat' in ds.dataset.variables
+        test = 'lat' in dataset.variables
         score += int(test)
         if not test:
             messages.append('lat is a required variable')
             return self.make_result(level, score, out_of, 'Lat and Lon are Time Series', messages)
 
-        test = 'lon' in ds.dataset.variables
+        test = 'lon' in dataset.variables
         score += int(test)
         if not test:
             messages.append('lon is a required variable')
@@ -78,19 +78,19 @@ class GliderCheck(BaseNCCheck):
             'valid_min'
         ]
         for attribute in required_coordinate_attributes:
-            test = hasattr(ds.dataset.variables['lat'], attribute)
+            test = hasattr(dataset.variables['lat'], attribute)
             score += int(test)
             if not test:
                 messages.append('%s attribute is required for lat' % attribute)
             
-            test = hasattr(ds.dataset.variables['lon'], attribute)
+            test = hasattr(dataset.variables['lon'], attribute)
             score += int(test)
             if not test:
                 messages.append('%s attribute is required for lat' % attribute)
 
         return self.make_result(level, score, out_of, 'Lat and Lon are Time Series', messages)
 
-    def check_variables(self, ds):
+    def check_variables(self, dataset):
         '''
         Verifies the dataset has the required variables
         '''
@@ -121,13 +121,13 @@ class GliderCheck(BaseNCCheck):
         score = 0
         messages = []
         for variable in required_variables:
-            test = variable in ds.dataset.variables
+            test = variable in dataset.variables
             score += int(test)
             if not test:
                 messages.append("%s is a required variable" % variable)
         return self.make_result(level, score, out_of, 'Required Variables', messages)
 
-    def check_qc_variables(self, ds):
+    def check_qc_variables(self, dataset):
         '''
         Verifies the dataset has all the required QC variables
         '''
@@ -163,19 +163,19 @@ class GliderCheck(BaseNCCheck):
         score = 0
         messages = []
         for variable in required_variables:
-            test = variable in ds.dataset.variables
+            test = variable in dataset.variables
             if not test:
                 messages.append("%s is a required qc variable" % variable)
                 continue
             for field in required_attributes:
-                if not hasattr(ds.dataset.variables[variable], field):
+                if not hasattr(dataset.variables[variable], field):
                     messages.append('%s is missing attribute %s' % (variable, field))
                     test = False
                     break
             score += int(test)
         return self.make_result(level, score, out_of, 'Required QC Variables', messages)
 
-    def check_global_attributes(self, ds):
+    def check_global_attributes(self, dataset):
         '''
         Verifies the base metadata in the global attributes
         '''
@@ -218,7 +218,7 @@ class GliderCheck(BaseNCCheck):
         score = 0
         messages = []
         for field in attribute_fields:
-            v = getattr(ds.dataset, field, '')
+            v = getattr(dataset, field, '')
             test = v != ''
             score += int(test)
             out_of += 1
@@ -236,7 +236,7 @@ class GliderCheck(BaseNCCheck):
         
         return self.make_result(level, score, out_of, 'Required Global Attributes', messages)
 
-    def check_wmo(self, ds):
+    def check_wmo(self, dataset):
         '''
         Verifies that the data has a WMO ID but not necessarily filled out
         '''
@@ -244,19 +244,19 @@ class GliderCheck(BaseNCCheck):
         score = 0
         out_of = 1
         messages = []
-        test = hasattr(ds.dataset, 'wmo_id')
+        test = hasattr(dataset, 'wmo_id')
         score += int(test)
         if not test:
             messages.append("WMO ID is a required attribute but can be empty if the dataset doesn't have a WMO ID")
 
         return self.make_result(level, score, out_of, 'WMO ID', messages)
 
-    def check_summary(self, ds):
+    def check_summary(self, dataset):
         level = BaseCheck.MEDIUM
         out_of = 1
         score = 0
         messages = []
-        if hasattr(ds.dataset, 'summary') and ds.dataset.summary:
+        if hasattr(dataset, 'summary') and dataset.summary:
             score += 1
         else:
             messages.append('Dataset must define summary')
@@ -264,7 +264,7 @@ class GliderCheck(BaseNCCheck):
 
 
 
-    def check_primary_variable_attributes(self, ds):
+    def check_primary_variable_attributes(self, dataset):
         '''
         Verifies that each primary variable has the necessary metadata
         '''
@@ -298,7 +298,7 @@ class GliderCheck(BaseNCCheck):
         ]
         for var in primary_variables:
             for attribute in required_attributes:
-                test = hasattr(ds.dataset.variables[var], attribute)
+                test = hasattr(dataset.variables[var], attribute)
                 out_of += 1
                 score += int(test)
                 if not test:
@@ -306,7 +306,7 @@ class GliderCheck(BaseNCCheck):
 
         return self.make_result(level, score, out_of, 'Required Variable Attributes', messages)
 
-    def check_dimensions(self, ds):
+    def check_dimensions(self, dataset):
         '''
         NetCDF files submitted by the individual glider operators contain 2
         dimension variables:
@@ -323,14 +323,14 @@ class GliderCheck(BaseNCCheck):
         ]
         out_of = len(required_dimensions)
 
-        for dimension in ds.dataset.dimensions:
+        for dimension in dataset.dimensions:
             test =  dimension in required_dimensions
             score += int(test)
             if not test:
                 messages.append('%s is not a valid dimension' % dimension)
         return self.make_result(level, score, out_of, 'Required Dimensions', messages)
 
-    def check_trajectory_variables(self, ds):
+    def check_trajectory_variables(self, dataset):
         '''
         The trajectory variable stores a character array that identifies the
         deployment during which the data was gathered. This variable is used by
@@ -345,30 +345,30 @@ class GliderCheck(BaseNCCheck):
         score = 0
         messages = []
 
-        test = 'trajectory' in ds.dataset.variables
+        test = 'trajectory' in dataset.variables
         score += int(test)
         if not test:
             messages.append('trajectory variable not found')
             return self.make_result(level, score, out_of, 'Trajectory Variable', messages)
-        test = ds.dataset.variables['trajectory'].dimensions == ('traj_strlen',)
+        test = dataset.variables['trajectory'].dimensions == ('traj_strlen',)
         score += int(test)
         if not test:
             messages.append('trajectory has an invalid dimension')
-        test = hasattr(ds.dataset.variables['trajectory'], 'cf_role')
+        test = hasattr(dataset.variables['trajectory'], 'cf_role')
         score += int(test)
         if not test:
             messages.append('trajectory is missing cf_role')
-        test = hasattr(ds.dataset.variables['trajectory'], 'comment')
+        test = hasattr(dataset.variables['trajectory'], 'comment')
         score += int(test)
         if not test:
             messages.append('trajectory is missing comment')
-        test = hasattr(ds.dataset.variables['trajectory'], 'long_name')
+        test = hasattr(dataset.variables['trajectory'], 'long_name')
         score += int(test)
         if not test:
             messages.append('trajectory is missing long_name')
         return self.make_result(level, score, out_of, 'Trajectory Variable', messages)
 
-    def check_time_series_variables(self, ds):
+    def check_time_series_variables(self, dataset):
         '''
         Verifies that the time coordinate variable is correct
         '''
@@ -378,48 +378,48 @@ class GliderCheck(BaseNCCheck):
         score = 0
         messages = []
 
-        test = 'time' in ds.dataset.variables
+        test = 'time' in dataset.variables
         score += int(test)
         if not test:
             messages.append('Required coordinate variable time is missing')
             return self.make_result(level, score, out_of, 'Time Series Variable', messages)
 
-        test = ds.dataset.variables['time'].dtype.str == '<f8'
+        test = dataset.variables['time'].dtype.str == '<f8'
         score += int(test)
         if not test:
             messages.append('Invalid variable type for time, it should be float64')
 
-        test = ds.dataset.variables['time'].ancillary_variables == 'time_qc'
+        test = dataset.variables['time'].ancillary_variables == 'time_qc'
         score += int(test)
         if not test:
             messages.append('Invalid ancillary_variables attribute for time, should be "time_qc"')
 
-        test = ds.dataset.variables['time'].calendar == 'gregorian'
+        test = dataset.variables['time'].calendar == 'gregorian'
         score += int(test)
         if not test:
             messages.append('Invalid calendar for time, should be "gregorian"')
 
-        test = ds.dataset.variables['time'].long_name == 'Time'
+        test = dataset.variables['time'].long_name == 'Time'
         score += int(test)
         if not test:
             messages.append('Invalid long_name for time, should be "Time"')
 
-        test = ds.dataset.variables['time'].observation_type == 'measured'
+        test = dataset.variables['time'].observation_type == 'measured'
         score += int(test)
         if not test:
             messages.append('Invalid observation_type for time, should be "measured"')
 
-        test = ds.dataset.variables['time'].standard_name == 'time'
+        test = dataset.variables['time'].standard_name == 'time'
         score += int(test)
         if not test:
             messages.append('Invalid standard name for time, should be "time"')
 
-        test = hasattr(ds.dataset.variables['time'], 'units')
+        test = hasattr(dataset.variables['time'], 'units')
         score += int(test)
         if not test:
             messages.append('No units defined for time')
 
-        test = 'time_qc' in ds.dataset.variables
+        test = 'time_qc' in dataset.variables
         score += int(test)
         if not test:
             messages.append('time_qc is not defined')
@@ -435,14 +435,14 @@ class GliderCheck(BaseNCCheck):
             'valid_min'
         ]
         for attribute in required_time_qc_attributes:
-            test = hasattr(ds.dataset.variables['time_qc'], attribute)
+            test = hasattr(dataset.variables['time_qc'], attribute)
             score += int(test)
             if not test:
                 messages.append('%s attribute is required for time_qc' % attribute)
 
         return self.make_result(level, score, out_of, 'Time Series Variable', messages)
 
-    def check_depth_coordinates(self, ds):
+    def check_depth_coordinates(self, dataset):
         '''
         Verifies that the pressure coordinate/data variable is correct
         '''
@@ -455,7 +455,7 @@ class GliderCheck(BaseNCCheck):
         coordinates = ['pressure', 'depth']
 
         for coordinate in coordinates:
-            test = coordinate in ds.dataset.variables
+            test = coordinate in dataset.variables
             score += int(test)
 
             if not test:
@@ -465,7 +465,7 @@ class GliderCheck(BaseNCCheck):
         required_values = {
         }
 
-        data_vars = { i: ds.dataset.variables[i] for i in coordinates}
+        data_vars = { i: dataset.variables[i] for i in coordinates}
         for key, value in required_values.iteritems():
             for data_var in data_vars:
                 if not hasattr(data_vars[data_var], key):
@@ -504,7 +504,7 @@ class GliderCheck(BaseNCCheck):
 
         return self.make_result(level, score, out_of, 'Depth/Pressure Variables', messages)
 
-    def check_ctd_variables(self, ds):
+    def check_ctd_variables(self, dataset):
         '''
         Verifies that the CTD Variables are the correct data type and contain
         the correct metadata
@@ -538,10 +538,10 @@ class GliderCheck(BaseNCCheck):
         ]
 
         for var in variables:
-            if var not in ds.dataset.variables:
+            if var not in dataset.variables:
                 messages.append('%s variable missing' % var)
                 continue
-            nc_var = ds.dataset.variables[var]
+            nc_var = dataset.variables[var]
 
             test = nc_var.dtype.str == '<f8'
             score += int(test)
@@ -557,7 +557,7 @@ class GliderCheck(BaseNCCheck):
             score += 1
         return self.make_result(level, score, out_of, 'CTD Variables', messages)
 
-    def check_standard_names(self, ds):
+    def check_standard_names(self, dataset):
         '''
         Verifies that the standard names are correct.
         '''
@@ -570,10 +570,10 @@ class GliderCheck(BaseNCCheck):
         }
 
         for var in std_names:
-            if var not in ds.dataset.variables:
+            if var not in dataset.variables:
                 messages.append("Can't verify standard name for %s: %s is missing." % (var, var))
                 continue
-            nc_var = ds.dataset.variables[var]
+            nc_var = dataset.variables[var]
             test = getattr(nc_var, 'standard_name', None) == std_names[var]
             score += int(test)
             if not test:
@@ -582,7 +582,7 @@ class GliderCheck(BaseNCCheck):
         return self.make_result(level, score, out_of, 'Standard Names', messages)
 
 
-    def check_profile_vars(self, ds):
+    def check_profile_vars(self, dataset):
         '''
         Verifies that the profile variables are the of the correct data type
         and contain the correct metadata
@@ -703,12 +703,12 @@ class GliderCheck(BaseNCCheck):
         }
 
         for profile_var in data_struct:
-            test = profile_var in ds.dataset.variables
+            test = profile_var in dataset.variables
             if not test:
                 messages.append("Required Variable %s is missing" % profile_var)
                 continue
 
-            nc_var = ds.dataset.variables[profile_var]
+            nc_var = dataset.variables[profile_var]
             dtype = np.dtype(data_struct[profile_var]['dtype'])
             test = nc_var.dtype.str == dtype.str
             score += int(test)
@@ -724,7 +724,7 @@ class GliderCheck(BaseNCCheck):
 
         return self.make_result(level, score, out_of, 'Profile Variables', messages)
 
-    def check_container_variables(self, ds):
+    def check_container_variables(self, dataset):
         '''
         Verifies that the dimensionless container variables are the correct
         data type and contain the required metadata
@@ -766,12 +766,12 @@ class GliderCheck(BaseNCCheck):
         }
 
         for container_var in data_struct:
-            test = container_var in ds.dataset.variables
+            test = container_var in dataset.variables
             if not test:
                 messages.append("Required Variable %s is missing" % container_var)
                 continue
 
-            nc_var = ds.dataset.variables[container_var]
+            nc_var = dataset.variables[container_var]
             dtype = np.dtype(data_struct[container_var]['dtype'])
             test = nc_var.dtype.str == dtype.str
             score += int(test)
