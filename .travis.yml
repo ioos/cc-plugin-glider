@@ -16,7 +16,8 @@ before_install:
     - conda config --add channels ioos --force
     - travis_retry conda create --yes -n TEST --file requirements.txt $CONDA
     - source activate TEST
-    - travis_retry conda install --yes pytest
+    - travis_retry conda install --yes pytest flake8
 
 script:
-    - py.test --verbose --ignore setup.py
+    - python setup.py test -a "--verbose"
+    - find . -type f -name "*.py" | xargs flake8 --max-line-length=100
