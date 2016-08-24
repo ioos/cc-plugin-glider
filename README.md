@@ -1,5 +1,7 @@
 # GliderDAC Compliance Checker Plugin
 
+[![Build Status](https://travis-ci.org/ioos/cc-plugin-glider.svg?branch=master)](https://travis-ci.org/ioos/cc-plugin-glider)
+
 This is a checker for [GliderDAC](https://github.com/ioos/ioosngdac/wiki/NGDAC-NetCDF-File-Format-Version-2) files.
 
 It works with the [ioos/compliance-checker](https://github.com/ioos/compliance-checker).
