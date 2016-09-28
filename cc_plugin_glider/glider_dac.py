@@ -223,7 +223,7 @@ class GliderCheck(BaseNCCheck):
             'publisher_name',
             'publisher_url',
             'references',
-            'sea_name',
+            # 'sea_name',  #sea_name check is more involved below
             'source',
             'standard_name_vocabulary',
             'summary',
@@ -251,15 +251,21 @@ class GliderCheck(BaseNCCheck):
                 messages.append('%s global attribute can not be empty' % field)
 
         sea_names = [sn.lower() for sn in util.get_sea_names()]
-        sea_name = getattr(dataset, 'sea_name', '')
-        sea_name = sea_name.replace(', ', ',')
-        sea_name = sea_name.split(',') if sea_name else []
-        for sea in sea_name:
-            test = sea.lower() in sea_names
-            score += int(test)
+        sea_name = getattr(dataset, 'sea_name', '').replace(', ', ',')
+        if sea_name:
+            # Ok score a point for the fact that the attribute exists
+            score += 1
             out_of += 1
-            if not test:
-                messages.append('sea_name attribute should exist and should be from the NODC sea names list: {} is not a valid sea name'.format(sea))
+            sea_name = sea_name.split(',')
+            for sea in sea_name:
+                test = sea.lower() in sea_names
+                score += int(test)
+                out_of += 1
+                if not test:
+                    messages.append('sea_name attribute should be from the NODC sea names list: {} is not a valid sea name'.format(sea))
+        else:
+            out_of += 1
+            messages.append('sea_name global attribute is missing')
 
         return self.make_result(level, score, out_of,
                                 'Required Global Attributes', messages)
