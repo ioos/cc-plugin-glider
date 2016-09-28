@@ -262,7 +262,8 @@ class GliderCheck(BaseNCCheck):
                 score += int(test)
                 out_of += 1
                 if not test:
-                    messages.append('sea_name attribute should be from the NODC sea names list: {} is not a valid sea name'.format(sea))
+                    messages.append(('sea_name attribute should be from the NODC sea names list:'
+                                     ' {} is not a valid sea name').format(sea))
         else:
             out_of += 1
             messages.append('sea_name global attribute is missing')
