@@ -8,7 +8,7 @@ https://github.com/ioos/ioosngdac/wiki
 '''
 
 from __future__ import (absolute_import, division, print_function)
-
+from cc_plugin_glider import util
 from compliance_checker.base import BaseCheck, BaseNCCheck, Result
 import numpy as np
 
@@ -249,6 +249,17 @@ class GliderCheck(BaseNCCheck):
             out_of += 1
             if not test:
                 messages.append('%s global attribute can not be empty' % field)
+
+        sea_names = [sn.lower() for sn in util.get_sea_names()]
+        sea_name = getattr(dataset, 'sea_name', '')
+        sea_name = sea_name.replace(', ', ',')
+        sea_name = sea_name.split(',') if sea_name else []
+        for sea in sea_name:
+            test = sea.lower() in sea_names
+            score += int(test)
+            out_of += 1
+            if not test:
+                messages.append('sea_name attribute should exist and should be from the NODC sea names list: {} is not a valid sea name'.format(sea))
 
         return self.make_result(level, score, out_of,
                                 'Required Global Attributes', messages)
