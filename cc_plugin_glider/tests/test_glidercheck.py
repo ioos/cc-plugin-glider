@@ -95,7 +95,9 @@ class TestGliderCheck(unittest.TestCase):
         '''
         dataset = self.get_dataset(static_files['glider_std'])
         result = self.check.check_global_attributes(dataset)
-        self.assertEqual(result.value, (64, 64))
+        self.assertEqual(result.value, (63, 64))
+        self.assertIn(('sea_name attribute should be from the NODC sea names list:'
+                       ' Sea of Dorne is not a valid sea name'), result.msgs)
 
     def test_metadata(self):
         '''
@@ -104,6 +106,16 @@ class TestGliderCheck(unittest.TestCase):
         dataset = self.get_dataset(static_files['bad_metadata'])
         result = self.check.check_global_attributes(dataset)
         self.assertEqual(result.value, (41, 64))
+
+    def test_seanames(self):
+        '''
+        Tests that sea names error message appears
+        '''
+        dataset = self.get_dataset(static_files['bad_metadata'])
+        result = self.check.check_global_attributes(dataset)
+        self.assertEqual(result.value, (41, 64))
+        self.assertIn(('sea_name attribute should be from the NODC sea names list:'
+                       '   is not a valid sea name'), result.msgs)
 
     def test_standard_names(self):
         '''

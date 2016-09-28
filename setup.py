@@ -53,6 +53,7 @@ setup(name="cc-plugin-glider",
       install_requires=reqs,
       tests_require=['pytest'],
       cmdclass=dict(test=PyTest),
+      package_data={'cc_plugin_glider': ['data/*.csv']},
       classifiers=[
           'Development Status :: 5 - Production/Stable',
           'Intended Audience :: Developers',
