@@ -1,7 +1,7 @@
 from __future__ import (absolute_import, division, print_function)
 
 import unittest
-from pkg_resources import resource_filename
+from cc_plugin_glider.tests.resources import STATIC_FILES
 from netCDF4 import Dataset
 
 from ..glider_dac import GliderCheck
@@ -10,13 +10,6 @@ try:
     basestring
 except NameError:
     basestring = str
-
-static_files = {
-    'glider_std': resource_filename('cc_plugin_glider', 'tests/data/gliders/IOOS_Glider_NetCDF_v2.0.nc'),  # noqa
-    'bad_location': resource_filename('cc_plugin_glider', 'tests/data/gliders/bad_location.nc'),  # noqa
-    'bad_qc': resource_filename('cc_plugin_glider', 'tests/data/gliders/bad_qc.nc'),  # noqa
-    'bad_metadata': resource_filename('cc_plugin_glider', 'tests/data/gliders/bad_metadata.nc'),  # noqa
-}
 
 
 class TestGliderCheck(unittest.TestCase):
@@ -53,7 +46,7 @@ class TestGliderCheck(unittest.TestCase):
         '''
         Checks that a file with the proper lat and lon do work
         '''
-        dataset = self.get_dataset(static_files['glider_std'])
+        dataset = self.get_dataset(STATIC_FILES['glider_std'])
         result = self.check.check_locations(dataset)
         self.assertTrue(result.value)
 
@@ -61,7 +54,7 @@ class TestGliderCheck(unittest.TestCase):
         '''
         Ensures the checks fail for location
         '''
-        dataset = self.get_dataset(static_files['bad_location'])
+        dataset = self.get_dataset(STATIC_FILES['bad_location'])
         result = self.check.check_locations(dataset)
         self.assertEqual(result.value, (0, 1))
 
@@ -69,7 +62,7 @@ class TestGliderCheck(unittest.TestCase):
         '''
         Ensures the ctd checks fail for temperature
         '''
-        dataset = self.get_dataset(static_files['bad_qc'])
+        dataset = self.get_dataset(STATIC_FILES['bad_qc'])
         result = self.check.check_ctd_variables(dataset)
         self.assertEqual(result.value, (55, 56))
 
@@ -77,7 +70,7 @@ class TestGliderCheck(unittest.TestCase):
         '''
         Ensures the ctd checks for the correct file
         '''
-        dataset = self.get_dataset(static_files['glider_std'])
+        dataset = self.get_dataset(STATIC_FILES['glider_std'])
         result = self.check.check_ctd_variables(dataset)
         self.assertEqual(result.value, (56, 56))
 
@@ -85,7 +78,7 @@ class TestGliderCheck(unittest.TestCase):
         '''
         Tests that the global checks fail where appropriate
         '''
-        dataset = self.get_dataset(static_files['bad_qc'])
+        dataset = self.get_dataset(STATIC_FILES['bad_qc'])
         result = self.check.check_global_attributes(dataset)
         self.assertEqual(result.value, (41, 64))
 
@@ -93,39 +86,74 @@ class TestGliderCheck(unittest.TestCase):
         '''
         Tests that the global checks work
         '''
-        dataset = self.get_dataset(static_files['glider_std'])
+        dataset = self.get_dataset(STATIC_FILES['glider_std'])
         result = self.check.check_global_attributes(dataset)
-        self.assertEqual(result.value, (63, 64))
-        self.assertIn(('sea_name attribute should be from the NODC sea names list:'
-                       ' Sea of Dorne is not a valid sea name'), result.msgs)
+        self.assertEqual(result.value, (64, 64))
 
     def test_metadata(self):
         '''
         Tests that empty attributes fail
         '''
-        dataset = self.get_dataset(static_files['bad_metadata'])
+        dataset = self.get_dataset(STATIC_FILES['bad_metadata'])
         result = self.check.check_global_attributes(dataset)
         self.assertEqual(result.value, (41, 64))
-
-    def test_seanames(self):
-        '''
-        Tests that sea names error message appears
-        '''
-        dataset = self.get_dataset(static_files['bad_metadata'])
-        result = self.check.check_global_attributes(dataset)
-        self.assertEqual(result.value, (41, 64))
-        self.assertIn(('sea_name attribute should be from the NODC sea names list:'
-                       '   is not a valid sea name'), result.msgs)
 
     def test_standard_names(self):
         '''
         Tests that the standard names succeed/fail
         '''
 
-        dataset = self.get_dataset(static_files['bad_metadata'])
+        dataset = self.get_dataset(STATIC_FILES['bad_metadata'])
         result = self.check.check_standard_names(dataset)
         self.assertEqual(result.value, (0, 1))
 
-        dataset = self.get_dataset(static_files['glider_std'])
+        dataset = self.get_dataset(STATIC_FILES['glider_std'])
         result = self.check.check_standard_names(dataset)
         self.assertEqual(result.value, (1, 1))
+
+    def test_valid_lon(self):
+        dataset = self.get_dataset(STATIC_FILES['bad_metadata'])
+        result = self.check.check_valid_lon(dataset)
+        assert result.value == (0, 1)
+
+        dataset = self.get_dataset(STATIC_FILES['glider_std'])
+        result = self.check.check_valid_lon(dataset)
+        assert result.value == (1, 1)
+
+    def test_ioos_ra(self):
+        dataset = self.get_dataset(STATIC_FILES['glider_std'])
+        result = self.check.check_ioos_ra(dataset)
+        assert result.value == (0, 1)
+
+        dataset = self.get_dataset(STATIC_FILES['glider_std3'])
+        result = self.check.check_ioos_ra(dataset)
+        assert result.value == (1, 1)
+
+    def test_valid_min_dtype(self):
+        dataset = self.get_dataset(STATIC_FILES['glider_std'])
+        result = self.check.check_valid_min_dtype(dataset)
+        assert result.value == (30, 32)
+
+        dataset = self.get_dataset(STATIC_FILES['glider_std3'])
+        result = self.check.check_valid_min_dtype(dataset)
+        assert result.value == (58, 58)
+
+    def test_valid_max_dtype(self):
+        dataset = self.get_dataset(STATIC_FILES['glider_std'])
+        result = self.check.check_valid_max_dtype(dataset)
+        assert result.value == (30, 32)
+
+        dataset = self.get_dataset(STATIC_FILES['glider_std3'])
+        result = self.check.check_valid_max_dtype(dataset)
+        assert result.value == (58, 58)
+
+    def test_seanames(self):
+        '''
+        Tests that sea names error message appears
+        '''
+        dataset = self.get_dataset(STATIC_FILES['bad_metadata'])
+        result = self.check.check_global_attributes(dataset)
+        self.assertEqual(result.value, (41, 64))
+        self.assertIn(('sea_name attribute should be from the NODC sea names list:'
+                       '   is not a valid sea name'), result.msgs)
+
