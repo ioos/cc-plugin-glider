@@ -9,7 +9,7 @@ https://github.com/ioos/ioosngdac/wiki
 
 from __future__ import (absolute_import, division, print_function)
 from cc_plugin_glider import util
-from compliance_checker.base import BaseCheck, BaseNCCheck, Result
+from compliance_checker.base import BaseCheck, BaseNCCheck, Result, TestCtx
 import numpy as np
 
 try:
@@ -845,3 +845,148 @@ class GliderCheck(BaseNCCheck):
 
         return self.make_result(level, score, out_of,
                                 'Container Variables', messages)
+
+    def check_qartod(self, dataset):
+        '''
+        If the qartod variables exist, check the attributes
+        '''
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'QARTOD Variables')
+        qartod_variables = [
+            'qartod_{}_climatological_flag',
+            'qartod_{}_flat_line_flag',
+            'qartod_{}_gross_range_flag',
+            'qartod_{}_rate_of_chagne_flag',
+            'qartod_{}_spike_flag'
+        ]
+
+        # Iterate through each physical variable and each qartod variable name
+        # and check the attributes of all variables if they exist
+
+        for param in ('temperature', 'conductivity', 'density', 'pressure'):
+            for qartod in qartod_variables:
+                qartod_var = qartod.format(param)
+                if qartod_var not in dataset.variables:
+                    continue
+
+                ncvar = dataset.variables[qartod_var]
+                valid_min = getattr(ncvar, 'valid_min', None)
+                valid_max = getattr(ncvar, 'valid_max', None)
+                flag_values = getattr(ncvar, 'flag_values', None)
+                test_ctx.assert_true(getattr(ncvar, '_FillValue', None) == np.int8(9),
+                                     'variable {} must have a _FillValue of 9b'.format(qartod_var))
+
+                test_ctx.assert_true(getattr(ncvar, 'long_name', ''),
+                                     'attribute {}:long_name must be a non-empty string'
+                                     ''.format(qartod_var))
+
+                test_ctx.assert_true(getattr(ncvar, 'flag_meanings', ''),
+                                     'attribute {}:flag_meanings must be a non-empty string'
+                                     ''.format(qartod_var))
+
+                test_ctx.assert_true(isinstance(flag_values, np.ndarray),
+                                     'attribute {}:flag_values must be defined as an array of bytes'
+                                     ''.format(qartod_var))
+
+                if isinstance(flag_values, np.ndarray):
+                    dtype = flag_values.dtype.str
+                    test_ctx.assert_true(dtype == '|i1',
+                                         'attribute {}:flag_values has an illegal data-type, must '
+                                         'be byte'.format(qartod_var))
+
+                valid_min_dtype = getattr(valid_min, 'dtype', None)
+                test_ctx.assert_true(getattr(valid_min_dtype, 'str', None) == '|i1',
+                                     'attribute {}:valid_min must be of type byte'
+                                     ''.format(qartod_var))
+
+                valid_max_dtype = getattr(valid_max, 'dtype', None)
+                test_ctx.assert_true(getattr(valid_max_dtype, 'str', None) == '|i1',
+                                     'attribute {}:valid_max must be of type byte'
+                                     ''.format(qartod_var))
+
+        if test_ctx.out_of == 0:
+            return None
+
+        return test_ctx.to_result()
+
+    def check_ioos_ra(self, dataset):
+        '''
+        Check if the ioos_regional_association attribute exists, if it does check that it's not
+        empty
+        '''
+        test_ctx = TestCtx(BaseCheck.LOW, 'IOOS Regional Association Attribute')
+
+        ioos_ra = getattr(dataset, 'ioos_regional_association', None)
+
+        test_ctx.assert_true(ioos_ra,
+                             'ioos_regional_association global attribute should be defined')
+
+        return test_ctx.to_result()
+
+    def check_valid_min_dtype(self, dataset):
+        '''
+        Check that the valid attributes are valid data types
+        '''
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Correct valid_min data types')
+
+        for var_name in dataset.variables:
+            ncvar = dataset.variables[var_name]
+
+            valid_min = getattr(dataset.variables[var_name], 'valid_min', None)
+            if isinstance(valid_min, basestring):
+                valid_min_dtype = 'string'
+            elif isinstance(valid_min, float):
+                valid_min_dtype = 'float64'
+            elif isinstance(valid_min, int):
+                valid_min_dtype = 'int64'
+            else:
+                valid_min_dtype = str(getattr(valid_min, 'dtype', None))
+
+            if valid_min is not None:
+                test_ctx.assert_true(valid_min_dtype == str(ncvar.dtype),
+                                     '{}:valid_min has a different data type, {}, than variable {} '
+                                     '{}'.format(var_name, valid_min_dtype, str(ncvar.dtype),
+                                                 var_name))
+
+        return test_ctx.to_result()
+
+    def check_valid_max_dtype(self, dataset):
+        '''
+        Check that the valid attributes are valid data types
+        '''
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Correct valid_max data types')
+
+        for var_name in dataset.variables:
+            ncvar = dataset.variables[var_name]
+
+            valid_max = getattr(dataset.variables[var_name], 'valid_max', None)
+            if isinstance(valid_max, basestring):
+                valid_max_dtype = 'string'
+            elif isinstance(valid_max, float):
+                valid_max_dtype = 'float64'
+            elif isinstance(valid_max, int):
+                valid_max_dtype = 'int64'
+            else:
+                valid_max_dtype = str(getattr(valid_max, 'dtype', None))
+
+            if valid_max is not None:
+                test_ctx.assert_true(valid_max_dtype == str(ncvar.dtype),
+                                     '{}:valid_max has a different data type, {}, than variable {} '
+                                     '{}'.format(var_name, valid_max_dtype, str(ncvar.dtype),
+                                                 var_name))
+
+        return test_ctx.to_result()
+
+    def check_valid_lon(self, dataset):
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Longitude valid_min valid_max not [-90, 90]')
+
+        if 'lon' not in dataset.variables:
+            return
+
+        longitude = dataset.variables['lon']
+        valid_min = getattr(longitude, 'valid_min')
+        valid_max = getattr(longitude, 'valid_max')
+        test_ctx.assert_true(not(valid_min == -90 and valid_max == 90),
+                             "Longitude's valid_min and valid_max are [-90, 90], it's likey this "
+                             "was a mistake")
+        return test_ctx.to_result()
+

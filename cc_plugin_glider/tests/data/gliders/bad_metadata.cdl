@@ -39,8 +39,8 @@ variables:
 		lon:reference = "WGS84" ;
 		lon:standard_name = "longitude" ;
 		lon:units = "degrees_east" ;
-		lon:valid_max = 180. ;
-		lon:valid_min = -180. ;
+		lon:valid_max = 90. ;
+		lon:valid_min = -90. ;
 	double pressure(time) ;
 		pressure:_FillValue = -999. ;
 		pressure:accuracy = " " ;

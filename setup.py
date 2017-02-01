@@ -39,7 +39,9 @@ def readme():
     with open('README.md') as f:
         return f.read()
 
+
 reqs = [line.strip() for line in open('requirements.txt')]
+
 
 setup(name="cc-plugin-glider",
       version=extract_version(),

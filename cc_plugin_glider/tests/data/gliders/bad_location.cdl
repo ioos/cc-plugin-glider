@@ -1,4 +1,4 @@
-netcdf IOOS_Glider_NetCDF_v2.0 {
+netcdf bad_location {
 dimensions:
 	time = UNLIMITED ; // (0 currently)
 	traj_strlen = 20 ;
@@ -15,32 +15,6 @@ variables:
 		time:observation_type = "measured" ;
 		time:standard_name = "time" ;
 		time:units = "seconds since 1970-01-01T00:00:00Z" ;
-	double lat(time) ;
-		lat:_FillValue = -999. ;
-		lat:ancillary_variables = "lat_qc" ;
-		lat:comment = "Values may be interpolated between measured GPS fixes" ;
-		lat:coordinate_reference_frame = "urn:ogc:crs:EPSG::4326" ;
-		lat:long_name = "Latitude" ;
-		lat:observation_type = "measured" ;
-		lat:platform = "platform" ;
-		lat:reference = "WGS84" ;
-		lat:standard_name = "latitude" ;
-		lat:units = "degrees_north" ;
-		lat:valid_max = 90. ;
-		lat:valid_min = -90. ;
-	double lon(time) ;
-		lon:_FillValue = -999. ;
-		lon:ancillary_variables = "lon_qc" ;
-		lon:comment = "Values may be interpolated between measured GPS fixes" ;
-		lon:coordinate_reference_frame = "urn:ogc:crs:EPSG::4326" ;
-		lon:long_name = "Longitude" ;
-		lon:observation_type = "measured" ;
-		lon:platform = "platform" ;
-		lon:reference = "WGS84" ;
-		lon:standard_name = "longitude" ;
-		lon:units = "degrees_east" ;
-		lon:valid_max = 180. ;
-		lon:valid_min = -180. ;
 	double pressure(time) ;
 		pressure:_FillValue = -999. ;
 		pressure:accuracy = " " ;
@@ -113,7 +87,7 @@ variables:
 		salinity:platform = "platform" ;
 		salinity:precision = " " ;
 		salinity:resolution = " " ;
-		salinity:standard_name = "sea_water_practical_salinity" ;
+		salinity:standard_name = "sea_water_salinity" ;
 		salinity:units = "1e-3" ;
 		salinity:valid_max = 40. ;
 		salinity:valid_min = 0. ;
@@ -372,36 +346,77 @@ variables:
 // global attributes:
 		:Conventions = "CF-1.6, Unidata Dataset Discovery v1.0" ;
 		:Metadata_Conventions = "CF-1.6, Unidata Dataset Discovery v1.0" ;
-		:acknowledgment = "This deployment supported by the kind folks that wrote the compliance checker" ;
-		:comment = "This data is for testing the compliance checker only." ;
-		:contributor_name = "Developer" ;
-		:contributor_role = "developer" ;
-		:creator_email = "somedeveloper@email.com" ;
-		:creator_name = "developer" ;
-		:creator_url = "http://www.google.com/" ;
-		:date_created = "2014-04-01" ;
-		:date_issued = "2014-04-01" ;
-		:date_modified = "2014-04-01" ;
+		:acknowledgment = "This deployment supported by ..." ;
+		:comment = " " ;
+		:contributor_name = " " ;
+		:contributor_role = " " ;
+		:creator_email = " " ;
+		:creator_name = " " ;
+		:creator_url = " " ;
+		:date_created = " " ;
+		:date_issued = " " ;
+		:date_modified = " " ;
 		:format_version = "IOOS_Glider_NetCDF_v2.0.nc" ;
-		:history = "Not much to speak of" ;
-		:id = "unique_id" ;
-		:institution = "RPS ASA" ;
+		:history = " " ;
+		:id = " " ;
+		:institution = " " ;
 		:keywords = "AUVS > Autonomous Underwater Vehicles, Oceans > Ocean Pressure > Water Pressure, Oceans > Ocean Temperature > Water Temperature, Oceans > Salinity/Density > Conductivity, Oceans > Salinity/Density > Density, Oceans > Salinity/Density > Salinity" ;
 		:keywords_vocabulary = "GCMD Science Keywords" ;
 		:license = "This data may be redistributed and used without restriction.  Data provided as is with no expressed or implied assurance of quality assurance or quality control" ;
-		:metadata_link = "None" ;
+		:metadata_link = " " ;
 		:naming_authority = "edu.rutgers.marine" ;
 		:platform_type = "Slocum Glider" ;
-		:processing_level = "Processed and QCd" ;
-		:project = "GliderDAC v2" ;
-		:publisher_email = "developer@email.com" ;
-		:publisher_name = "A. Developer" ;
-		:publisher_url = "http://www.google.com/" ;
-		:references = "References go here" ;
-		:sea_name = "North Atlantic Ocean" ;
+		:processing_level = " " ;
+		:project = " " ;
+		:publisher_email = " " ;
+		:publisher_name = " " ;
+		:publisher_url = " " ;
+		:references = " " ;
+		:sea_name = " " ;
 		:source = "Observational data from a profiling glider" ;
 		:standard_name_vocabulary = "CF-v25" ;
 		:summary = "The Rutgers University Coastal Ocean Observation Lab has deployed autonomous underwater gliders around the world since 1990.  Gliders are small, free-swimming, unmanned vehicles that use changes in buoyancy to move vertically and horizontally through the water column in a saw-tooth pattern. They are deployed for days to several months and gather detailed information about the physical, chemical and biological processes of the world\'s The Slocum glider was designed and oceans. built by Teledyne Webb Research Corporation, Falmouth, MA, USA.  This dataset contains observational sub-surface profile data of the water-column." ;
-		:title = "Title goes here" ;
-		:wmo_id = "WMO NUMBER" ;
+		:title = " " ;
+		:wmo_id = " " ;
+data:
+
+ trajectory = "" ;
+
+ profile_id = _ ;
+
+ profile_time = _ ;
+
+ profile_lat = _ ;
+
+ profile_lon = _ ;
+
+ time_uv = _ ;
+
+ lat_uv = _ ;
+
+ lon_uv = _ ;
+
+ u = _ ;
+
+ v = _ ;
+
+ platform = _ ;
+
+ instrument_ctd = _ ;
+
+ profile_time_qc = _ ;
+
+ profile_lat_qc = _ ;
+
+ profile_lon_qc = _ ;
+
+ time_uv_qc = _ ;
+
+ lat_uv_qc = _ ;
+
+ lon_uv_qc = _ ;
+
+ u_qc = _ ;
+
+ v_qc = _ ;
 }
