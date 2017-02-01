@@ -17,7 +17,6 @@ try:
 except NameError:
     basestring = str
 
-
 class GliderCheck(BaseNCCheck):
     register_checker = True
     name = 'gliderdac'
@@ -906,5 +905,83 @@ class GliderCheck(BaseNCCheck):
         if test_ctx.out_of == 0:
             return None
 
+        return test_ctx.to_result()
+
+    def check_ioos_ra(self, dataset):
+        '''
+        Check if the ioos_regional_association attribute exists, if it does check that it's not empty
+        '''
+        test_ctx = TestCtx(BaseCheck.LOW, 'IOOS Regional Association Attribute')
+
+        ioos_ra = getattr(dataset, 'ioos_regional_association', None)
+
+        test_ctx.assert_true(ioos_ra,
+                             'ioos_regional_association global attribute should be defined')
+
+        return test_ctx.to_result()
+
+    def check_valid_min_dtype(self, dataset):
+        '''
+        Check that the valid attributes are valid data types
+        '''
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Correct valid_min data types')
+
+        for var_name in dataset.variables:
+            ncvar = dataset.variables[var_name]
+
+            valid_min = getattr(dataset.variables[var_name], 'valid_min', None)
+            if isinstance(valid_min, basestring):
+                valid_min_dtype = 'string'
+            elif isinstance(valid_min, float):
+                valid_min_dtype = 'float64'
+            elif isinstance(valid_min, int):
+                valid_min_dtype = 'int64'
+            else:
+                valid_min_dtype = str(getattr(valid_min, 'dtype', None))
+
+            if valid_min is not None:
+                test_ctx.assert_true(valid_min_dtype == str(ncvar.dtype),
+                                     '{}:valid_min has a different data type, {}, than variable {} {}'
+                                     ''.format(var_name, valid_min_dtype, str(ncvar.dtype), var_name))
+
+        return test_ctx.to_result()
+
+    def check_valid_max_dtype(self, dataset):
+        '''
+        Check that the valid attributes are valid data types
+        '''
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Correct valid_max data types')
+
+        for var_name in dataset.variables:
+            ncvar = dataset.variables[var_name]
+
+            valid_max = getattr(dataset.variables[var_name], 'valid_max', None)
+            if isinstance(valid_max, basestring):
+                valid_max_dtype = 'string'
+            elif isinstance(valid_max, float):
+                valid_max_dtype = 'float64'
+            elif isinstance(valid_max, int):
+                valid_max_dtype = 'int64'
+            else:
+                valid_max_dtype = str(getattr(valid_max, 'dtype', None))
+
+            if valid_max is not None:
+                test_ctx.assert_true(valid_max_dtype == str(ncvar.dtype),
+                                     '{}:valid_max has a different data type, {}, than variable {} {}'
+                                     ''.format(var_name, valid_max_dtype, str(ncvar.dtype), var_name))
+
+        return test_ctx.to_result()
+
+    def check_valid_lon(self, dataset):
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Longitude valid_min valid_max not [-90, 90]')
+
+        if 'lon' not in dataset.variables:
+            return
+
+        longitude = dataset.variables['lon']
+        valid_min = getattr(longitude, 'valid_min')
+        valid_max = getattr(longitude, 'valid_max')
+        test_ctx.assert_true(not(valid_min == -90 and valid_max == 90),
+                             "Longitude's valid_min and valid_max are [-90, 90], it's likey this was a mistake")
         return test_ctx.to_result()
 
