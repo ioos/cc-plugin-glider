@@ -4,4 +4,4 @@ build
 dist
 compliance_checker.egg-info
 *.egg-info
-
+cc_plugin_glider/tests/data/gliders/*.nc

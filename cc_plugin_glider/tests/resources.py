@@ -25,6 +25,7 @@ def generate_dataset(cdl_path, nc_path):
 STATIC_FILES = {
     'bad_metadata': get_filename('tests/data/gliders/bad_metadata.cdl'),
     'glider_std': get_filename('tests/data/gliders/IOOS_Glider_NetCDF_v2.0.cdl'),
+    'glider_std3': get_filename('tests/data/gliders/IOOS_Glider_NetCDF_v3.0.cdl'),
     'bad_location': get_filename('tests/data/gliders/bad_location.cdl'),
     'bad_qc': get_filename('tests/data/gliders/bad_qc.cdl')
 }
