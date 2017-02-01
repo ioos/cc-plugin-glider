@@ -9,7 +9,7 @@ https://github.com/ioos/ioosngdac/wiki
 
 from __future__ import (absolute_import, division, print_function)
 from cc_plugin_glider import util
-from compliance_checker.base import BaseCheck, BaseNCCheck, Result
+from compliance_checker.base import BaseCheck, BaseNCCheck, Result, TestCtx
 import numpy as np
 
 try:
@@ -845,3 +845,66 @@ class GliderCheck(BaseNCCheck):
 
         return self.make_result(level, score, out_of,
                                 'Container Variables', messages)
+
+    def check_qartod(self, dataset):
+        '''
+        If the qartod variables exist, check the attributes
+        '''
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'QARTOD Variables')
+        qartod_variables = [
+            'qartod_{}_climatological_flag',
+            'qartod_{}_flat_line_flag',
+            'qartod_{}_gross_range_flag',
+            'qartod_{}_rate_of_chagne_flag',
+            'qartod_{}_spike_flag'
+        ]
+
+        # Iterate through each physical variable and each qartod variable name
+        # and check the attributes of all variables if they exist
+
+        for param in ('temperature', 'conductivity', 'density', 'pressure'):
+            for qartod in qartod_variables:
+                qartod_var = qartod.format(param)
+                if qartod_var not in dataset.variables:
+                    continue
+
+                ncvar = dataset.variables[qartod_var]
+                valid_min = getattr(ncvar, 'valid_min', None)
+                valid_max = getattr(ncvar, 'valid_max', None)
+                flag_values = getattr(ncvar, 'flag_values', None)
+                test_ctx.assert_true(getattr(ncvar, '_FillValue', None) == np.int8(9),
+                                     'variable {} must have a _FillValue of 9b'.format(qartod_var))
+
+                test_ctx.assert_true(getattr(ncvar, 'long_name', ''),
+                                     'attribute {}:long_name must be a non-empty string'
+                                     ''.format(qartod_var))
+
+                test_ctx.assert_true(getattr(ncvar, 'flag_meanings', ''),
+                                     'attribute {}:flag_meanings must be a non-empty string'
+                                     ''.format(qartod_var))
+
+                test_ctx.assert_true(isinstance(flag_values, np.ndarray),
+                                     'attribute {}:flag_values must be defined as an array of bytes'
+                                     ''.format(qartod_var))
+
+                if isinstance(flag_values, np.ndarray):
+                    dtype = flag_values.dtype.str
+                    test_ctx.assert_true(dtype == '|i1',
+                                         'attribute {}:flag_values has an illegal data-type, must be byte'
+                                         ''.format(qartod_var))
+
+                valid_min_dtype = getattr(valid_min, 'dtype', None)
+                test_ctx.assert_true(getattr(valid_min_dtype, 'str', None) == '|i1',
+                                     'attribute {}:valid_min must be of type byte'
+                                     ''.format(qartod_var))
+
+                valid_max_dtype = getattr(valid_max, 'dtype', None)
+                test_ctx.assert_true(getattr(valid_max_dtype, 'str', None) == '|i1',
+                                     'attribute {}:valid_max must be of type byte'
+                                     ''.format(qartod_var))
+
+        if test_ctx.out_of == 0:
+            return None
+
+        return test_ctx.to_result()
+
