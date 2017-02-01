@@ -17,6 +17,7 @@ try:
 except NameError:
     basestring = str
 
+
 class GliderCheck(BaseNCCheck):
     register_checker = True
     name = 'gliderdac'
@@ -889,8 +890,8 @@ class GliderCheck(BaseNCCheck):
                 if isinstance(flag_values, np.ndarray):
                     dtype = flag_values.dtype.str
                     test_ctx.assert_true(dtype == '|i1',
-                                         'attribute {}:flag_values has an illegal data-type, must be byte'
-                                         ''.format(qartod_var))
+                                         'attribute {}:flag_values has an illegal data-type, must '
+                                         'be byte'.format(qartod_var))
 
                 valid_min_dtype = getattr(valid_min, 'dtype', None)
                 test_ctx.assert_true(getattr(valid_min_dtype, 'str', None) == '|i1',
@@ -909,7 +910,8 @@ class GliderCheck(BaseNCCheck):
 
     def check_ioos_ra(self, dataset):
         '''
-        Check if the ioos_regional_association attribute exists, if it does check that it's not empty
+        Check if the ioos_regional_association attribute exists, if it does check that it's not
+        empty
         '''
         test_ctx = TestCtx(BaseCheck.LOW, 'IOOS Regional Association Attribute')
 
@@ -941,8 +943,9 @@ class GliderCheck(BaseNCCheck):
 
             if valid_min is not None:
                 test_ctx.assert_true(valid_min_dtype == str(ncvar.dtype),
-                                     '{}:valid_min has a different data type, {}, than variable {} {}'
-                                     ''.format(var_name, valid_min_dtype, str(ncvar.dtype), var_name))
+                                     '{}:valid_min has a different data type, {}, than variable {} '
+                                     '{}'.format(var_name, valid_min_dtype, str(ncvar.dtype),
+                                                 var_name))
 
         return test_ctx.to_result()
 
@@ -967,8 +970,9 @@ class GliderCheck(BaseNCCheck):
 
             if valid_max is not None:
                 test_ctx.assert_true(valid_max_dtype == str(ncvar.dtype),
-                                     '{}:valid_max has a different data type, {}, than variable {} {}'
-                                     ''.format(var_name, valid_max_dtype, str(ncvar.dtype), var_name))
+                                     '{}:valid_max has a different data type, {}, than variable {} '
+                                     '{}'.format(var_name, valid_max_dtype, str(ncvar.dtype),
+                                                 var_name))
 
         return test_ctx.to_result()
 
@@ -982,6 +986,7 @@ class GliderCheck(BaseNCCheck):
         valid_min = getattr(longitude, 'valid_min')
         valid_max = getattr(longitude, 'valid_max')
         test_ctx.assert_true(not(valid_min == -90 and valid_max == 90),
-                             "Longitude's valid_min and valid_max are [-90, 90], it's likey this was a mistake")
+                             "Longitude's valid_min and valid_max are [-90, 90], it's likey this "
+                             "was a mistake")
         return test_ctx.to_result()
 
