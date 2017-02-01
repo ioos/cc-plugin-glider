@@ -398,7 +398,7 @@ variables:
 		:publisher_name = "A. Developer" ;
 		:publisher_url = "http://www.google.com/" ;
 		:references = "References go here" ;
-		:sea_name = "Sea of Dorne" ;
+		:sea_name = "North Atlantic Ocean" ;
 		:source = "Observational data from a profiling glider" ;
 		:standard_name_vocabulary = "CF-v25" ;
 		:summary = "The Rutgers University Coastal Ocean Observation Lab has deployed autonomous underwater gliders around the world since 1990.  Gliders are small, free-swimming, unmanned vehicles that use changes in buoyancy to move vertically and horizontally through the water column in a saw-tooth pattern. They are deployed for days to several months and gather detailed information about the physical, chemical and biological processes of the world\'s The Slocum glider was designed and oceans. built by Teledyne Webb Research Corporation, Falmouth, MA, USA.  This dataset contains observational sub-surface profile data of the water-column." ;
