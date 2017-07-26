@@ -8,7 +8,6 @@ variables:
         trajectory:comment = "A trajectory is a single deployment of a glider and may span multiple data files." ;
         trajectory:long_name = "Trajectory/Deployment Name" ;
     double time(time) ;
-        time:ancillary_variables = "time_qc" ;
         time:calendar = "gregorian" ;
         time:comment = "Measured or calculated time at each point in the time-series" ;
         time:long_name = "Time" ;
@@ -17,7 +16,6 @@ variables:
         time:units = "seconds since 1970-01-01T00:00:00Z" ;
     double lat(time) ;
         lat:_FillValue = -999. ;
-        lat:ancillary_variables = "qartod_location_flag lat_qc" ;
         lat:comment = "Interpolated latitude at each point in the time-series" ;
         lat:coordinate_reference_frame = "urn:ogc:crs:EPSG::4326" ;
         lat:long_name = "Latitude" ;
@@ -30,7 +28,6 @@ variables:
         lat:valid_min = -90. ;
     double lon(time) ;
         lon:_FillValue = -999. ;
-        lon:ancillary_variables = "qartod_location_flag lon_qc" ;
         lon:comment = "Interpolated longitude at each point in the time-series." ;
         lon:coordinate_reference_frame = "urn:ogc:crs:EPSG::4326" ;
         lon:long_name = "Longitude" ;
@@ -44,7 +41,6 @@ variables:
     double pressure(time) ;
         pressure:_FillValue = -999. ;
         pressure:accuracy = " " ;
-        pressure:ancillary_variables = "qartod_monotonic_pressure_flag qartod_pressure_flat_line_flag qartod_pressure_gross_range_flag qartod_pressure_rate_of_change_flag qartod_pressure_spike_flag pressure_qc" ;
         pressure:comment = " " ;
         pressure:instrument = "instrument_ctd" ;
         pressure:long_name = "Pressure" ;
@@ -61,7 +57,6 @@ variables:
     double depth(time) ;
         depth:_FillValue = -999. ;
         depth:accuracy = " " ;
-        depth:ancillary_variables = "depth_qc" ;
         depth:comment = " " ;
         depth:instrument = "instrument_ctd" ;
         depth:long_name = "Depth" ;
@@ -78,7 +73,6 @@ variables:
     double temperature(time) ;
         temperature:_FillValue = -999. ;
         temperature:accuracy = " " ;
-        temperature:ancillary_variables = "qartod_temperature_climatological_flag qartod_temperature_flat_line_flag qartod_temperature_gross_range_flag qartod_temperature_rate_of_change_flag qartod_temperature_spike_flag temperature_qc" ;
         temperature:instrument = "instrument_ctd" ;
         temperature:long_name = "Temperature" ;
         temperature:observation_type = "measured" ;
@@ -92,7 +86,6 @@ variables:
     double conductivity(time) ;
         conductivity:_FillValue = -999. ;
         conductivity:accuracy = " " ;
-        conductivity:ancillary_variables = "qartod_conductivity_climatological_flag qartod_conductivity_flat_line_flag qartod_conductivity_gross_range_flag qartod_conductivity_rate_of_change_flag qartod_conductivity_spike_flag conductivity_qc" ;
         conductivity:instrument = "instrument_ctd" ;
         conductivity:long_name = "Conductivity" ;
         conductivity:observation_type = "measured" ;
@@ -106,7 +99,6 @@ variables:
     double salinity(time) ;
         salinity:_FillValue = -999. ;
         salinity:accuracy = " " ;
-        salinity:ancillary_variables = "qartod_salinity_climatological_flag qartod_salinity_flat_line_flag qartod_salinity_rate_of_change_flag qartod_salinity_spike_flag salinity_qc" ;
         salinity:instrument = "instrument_ctd" ;
         salinity:long_name = "Salinity" ;
         salinity:observation_type = "calculated" ;
@@ -120,7 +112,6 @@ variables:
     double density(time) ;
         density:_FillValue = -999. ;
         density:accuracy = " " ;
-        density:ancillary_variables = "qartod_density_climatological_flag qartod_density_flat_line_flag qartod_density_rate_of_change_flag qartod_density_spike_flag density_qc" ;
         density:instrument = "instrument_ctd" ;
         density:long_name = "Density" ;
         density:observation_type = "calculated" ;
