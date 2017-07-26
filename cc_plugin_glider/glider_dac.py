@@ -414,7 +414,7 @@ class GliderCheck(BaseNCCheck):
         '''
 
         level = BaseCheck.HIGH
-        out_of = 16
+        out_of = 7
         score = 0
         messages = []
 
@@ -431,12 +431,15 @@ class GliderCheck(BaseNCCheck):
             msg = 'Invalid variable type for time, it should be float64'
             messages.append(msg)
 
-        test = dataset.variables['time'].ancillary_variables == 'time_qc'
-        score += int(test)
-        if not test:
-            msg = ('Invalid ancillary_variables attribute for time, '
-                   'should be "time_qc"')
-            messages.append(msg)
+        if hasattr(dataset.variables['time'], 'ancillary_variables'):
+            out_of += 1
+            acv = dataset.variables['time'].ancillary_variables
+            test = acv in dataset.variables
+            score += int(test)
+            if not test:
+                msg = ('Invalid ancillary_variables attribute for time, '
+                       '{} is not a variable'.format(acv))
+                messages.append(msg)
 
         test = dataset.variables['time'].calendar == 'gregorian'
         score += int(test)
@@ -463,29 +466,6 @@ class GliderCheck(BaseNCCheck):
         score += int(test)
         if not test:
             messages.append('No units defined for time')
-
-        test = 'time_qc' in dataset.variables
-        score += int(test)
-        if not test:
-            messages.append('time_qc is not defined')
-            return self.make_result(level, score, out_of,
-                                    'Time Series Variable', messages)
-
-        required_time_qc_attributes = [
-            '_FillValue',
-            'flag_meanings',
-            'flag_values',
-            'long_name',
-            'standard_name',
-            'valid_max',
-            'valid_min'
-        ]
-        for attribute in required_time_qc_attributes:
-            test = hasattr(dataset.variables['time_qc'], attribute)
-            score += int(test)
-            if not test:
-                messages.append('%s attribute is required for time_qc' %
-                                attribute)
 
         return self.make_result(level, score, out_of,
                                 'Time Series Variable', messages)

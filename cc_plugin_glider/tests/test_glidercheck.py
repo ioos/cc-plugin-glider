@@ -170,6 +170,18 @@ class TestGliderCheck(unittest.TestCase):
         result = self.check.check_qc_variables(dataset)
         assert result is None
 
+    def test_time_series_variables(self):
+        dataset = self.get_dataset(STATIC_FILES['bad_qc'])
+        result = self.check.check_time_series_variables(dataset)
+        assert result.value == (7, 8)
+        assert sorted(result.msgs) == [
+            'Invalid ancillary_variables attribute for time, notavariable is not a variable'
+        ]
+
+        dataset = self.get_dataset(STATIC_FILES['no_qc'])
+        result = self.check.check_time_series_variables(dataset)
+        assert result.value == (7, 7)
+
     def test_seanames(self):
         '''
         Tests that sea names error message appears
