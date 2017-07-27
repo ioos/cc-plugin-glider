@@ -145,23 +145,24 @@ class GliderCheck(BaseNCCheck):
         '''
         Verifies the dataset has all the required QC variables
         '''
-        required_variables = [
-            'time_qc',
-            'lat_qc',
-            'lon_qc',
-            'pressure_qc',
-            'depth_qc',
-            'temperature_qc',
-            'conductivity_qc',
-            'density_qc',
-            'profile_time_qc',
-            'profile_lat_qc',
-            'profile_lon_qc',
-            'time_uv_qc',
-            'lat_uv_qc',
-            'lon_uv_qc',
-            'u_qc',
-            'v_qc'
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'QC Variables')
+        qc_variables = [
+            'time',
+            'lat',
+            'lon',
+            'pressure',
+            'depth',
+            'temperature',
+            'conductivity',
+            'density',
+            'profile_time',
+            'profile_lat',
+            'profile_lon',
+            'time_uv',
+            'lat_uv',
+            'lon_uv',
+            'u',
+            'v'
         ]
 
         required_attributes = [
@@ -172,24 +173,22 @@ class GliderCheck(BaseNCCheck):
             'valid_max',
             'valid_min'
         ]
-        level = BaseCheck.MEDIUM
-        out_of = len(required_variables)
-        score = 0
-        messages = []
-        for variable in required_variables:
-            test = variable in dataset.variables
-            if not test:
-                messages.append("%s is a required qc variable" % variable)
+        for variable in qc_variables:
+            qc_var = '{}_qc'.format(variable)
+
+            # QC varibles are no longer required
+            if qc_var not in dataset.variables:
                 continue
+
             for field in required_attributes:
-                if not hasattr(dataset.variables[variable], field):
-                    messages.append('%s is missing attribute %s' %
-                                    (variable, field))
-                    test = False
-                    break
-            score += int(test)
-        return self.make_result(level, score, out_of,
-                                'Required QC Variables', messages)
+                test = hasattr(dataset.variables[qc_var], field)
+                test_ctx.assert_true(test,
+                                     'variable {} must have a {} attribute'.format(qc_var, field))
+
+        if test_ctx.out_of == 0:
+            return None
+
+        return test_ctx.to_result()
 
     def check_global_attributes(self, dataset):
         '''
@@ -415,7 +414,7 @@ class GliderCheck(BaseNCCheck):
         '''
 
         level = BaseCheck.HIGH
-        out_of = 16
+        out_of = 7
         score = 0
         messages = []
 
@@ -432,12 +431,15 @@ class GliderCheck(BaseNCCheck):
             msg = 'Invalid variable type for time, it should be float64'
             messages.append(msg)
 
-        test = dataset.variables['time'].ancillary_variables == 'time_qc'
-        score += int(test)
-        if not test:
-            msg = ('Invalid ancillary_variables attribute for time, '
-                   'should be "time_qc"')
-            messages.append(msg)
+        if hasattr(dataset.variables['time'], 'ancillary_variables'):
+            out_of += 1
+            acv = dataset.variables['time'].ancillary_variables
+            test = acv in dataset.variables
+            score += int(test)
+            if not test:
+                msg = ('Invalid ancillary_variables attribute for time, '
+                       '{} is not a variable'.format(acv))
+                messages.append(msg)
 
         test = dataset.variables['time'].calendar == 'gregorian'
         score += int(test)
@@ -464,29 +466,6 @@ class GliderCheck(BaseNCCheck):
         score += int(test)
         if not test:
             messages.append('No units defined for time')
-
-        test = 'time_qc' in dataset.variables
-        score += int(test)
-        if not test:
-            messages.append('time_qc is not defined')
-            return self.make_result(level, score, out_of,
-                                    'Time Series Variable', messages)
-
-        required_time_qc_attributes = [
-            '_FillValue',
-            'flag_meanings',
-            'flag_values',
-            'long_name',
-            'standard_name',
-            'valid_max',
-            'valid_min'
-        ]
-        for attribute in required_time_qc_attributes:
-            test = hasattr(dataset.variables['time_qc'], attribute)
-            score += int(test)
-            if not test:
-                messages.append('%s attribute is required for time_qc' %
-                                attribute)
 
         return self.make_result(level, score, out_of,
                                 'Time Series Variable', messages)
@@ -989,4 +968,3 @@ class GliderCheck(BaseNCCheck):
                              "Longitude's valid_min and valid_max are [-90, 90], it's likey this "
                              "was a mistake")
         return test_ctx.to_result()
-

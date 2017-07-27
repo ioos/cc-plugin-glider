@@ -147,6 +147,41 @@ class TestGliderCheck(unittest.TestCase):
         result = self.check.check_valid_max_dtype(dataset)
         assert result.value == (58, 58)
 
+    def test_qc_variables(self):
+        dataset = self.get_dataset(STATIC_FILES['glider_std'])
+        result = self.check.check_qc_variables(dataset)
+        assert result.value == (96, 96)
+
+        dataset = self.get_dataset(STATIC_FILES['glider_std3'])
+        result = self.check.check_qc_variables(dataset)
+        assert result.value == (96, 96)
+
+        dataset = self.get_dataset(STATIC_FILES['bad_qc'])
+        result = self.check.check_qc_variables(dataset)
+        assert result.value == (86, 90)
+        assert sorted(result.msgs) == [
+            'variable depth_qc must have a flag_meanings attribute',
+            'variable depth_qc must have a flag_values attribute',
+            'variable pressure_qc must have a long_name attribute',
+            'variable pressure_qc must have a standard_name attribute'
+        ]
+
+        dataset = self.get_dataset(STATIC_FILES['no_qc'])
+        result = self.check.check_qc_variables(dataset)
+        assert result is None
+
+    def test_time_series_variables(self):
+        dataset = self.get_dataset(STATIC_FILES['bad_qc'])
+        result = self.check.check_time_series_variables(dataset)
+        assert result.value == (7, 8)
+        assert sorted(result.msgs) == [
+            'Invalid ancillary_variables attribute for time, notavariable is not a variable'
+        ]
+
+        dataset = self.get_dataset(STATIC_FILES['no_qc'])
+        result = self.check.check_time_series_variables(dataset)
+        assert result.value == (7, 7)
+
     def test_seanames(self):
         '''
         Tests that sea names error message appears
@@ -156,4 +191,3 @@ class TestGliderCheck(unittest.TestCase):
         self.assertEqual(result.value, (41, 64))
         self.assertIn(('sea_name attribute should be from the NODC sea names list:'
                        '   is not a valid sea name'), result.msgs)
-

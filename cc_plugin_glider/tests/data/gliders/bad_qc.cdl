@@ -9,7 +9,7 @@ variables:
 		trajectory:long_name = "Trajectory/Deployment Name" ;
 	double time(time) ;
 		time:_FillValue = -999. ;
-		time:ancillary_variables = "time_qc" ;
+		time:ancillary_variables = "notavariable" ;
 		time:calendar = "gregorian" ;
 		time:long_name = "Time" ;
 		time:observation_type = "measured" ;
