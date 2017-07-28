@@ -1,10 +1,8 @@
 from __future__ import with_statement
 
 import os
-import sys
 
 from setuptools import setup, find_packages
-from setuptools.command.test import test as TestCommand
 
 
 def extract_version(module='cc_plugin_glider'):
@@ -21,20 +19,6 @@ def extract_version(module='cc_plugin_glider'):
     return version
 
 
-class PyTest(TestCommand):
-    user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
-
-    def initialize_options(self):
-        TestCommand.initialize_options(self)
-        self.pytest_args = []
-
-    def run_tests(self):
-        # Import here, cause outside the eggs aren't loaded.
-        import pytest
-        errno = pytest.main(self.pytest_args)
-        sys.exit(errno)
-
-
 def readme():
     with open('README.md') as f:
         return f.read()
@@ -49,12 +33,11 @@ setup(name="cc-plugin-glider",
       long_description=readme(),
       license='Apache License 2.0',
       author="Luke Campbell",
-      author_email="lcampbell@asascience.com",
+      author_email="luke.campbell@gdit.com",
       url="https://github.com/ioos/compliance-checker",
       packages=find_packages(),
       install_requires=reqs,
       tests_require=['pytest'],
-      cmdclass=dict(test=PyTest),
       package_data={'cc_plugin_glider': ['data/*.csv']},
       classifiers=[
           'Development Status :: 5 - Production/Stable',

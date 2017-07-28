@@ -17,5 +17,5 @@ before_install:
     - source activate TEST
 
 script:
-    - python setup.py test -a "--verbose"
+    - py.test -s -rxs -v
     - find . -type f -name "*.py" | xargs flake8 --max-line-length=100 --ignore W391
