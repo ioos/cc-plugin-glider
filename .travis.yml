@@ -13,9 +13,17 @@ matrix:
     env: TEST_TARGET=default
   - python: 3.6
     env: TEST_TARGET=coding_standards
+  - python: 2.7
+    env: TEST_TARGET=latest_compliance_checker
+  - python: 3.6
+    env: TEST_TARGET=latest_compliance_checker
   allow_failures:
   - python: 3.6
     env: TEST_TARGET=coding_standards
+  - python: 2.7
+    env: TEST_TARGET=latest_compliance_checker
+  - python: 3.6
+    env: TEST_TARGET=latest_compliance_checker
 
 before_install:
   - wget http://bit.ly/miniconda -O miniconda.sh
@@ -32,6 +40,12 @@ install:
 
 script:
   - if [[ $TEST_TARGET == 'default' ]]; then
+      py.test -s -rxs -v ;
+    fi
+
+  - if [[ $TEST_TARGET == 'latest_compliance_checker' ]]; then
+      conda uninstall compliance-checker ;
+      pip install git+https://github.com/ioos/compliance-checker.git ;
       py.test -s -rxs -v ;
     fi
 
