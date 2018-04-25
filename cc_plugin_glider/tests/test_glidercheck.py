@@ -96,7 +96,7 @@ class TestGliderCheck(unittest.TestCase):
         '''
         dataset = self.get_dataset(STATIC_FILES['bad_metadata'])
         result = self.check.check_global_attributes(dataset)
-        self.assertEqual(result.value, (41, 64))
+        self.assertEqual(result.value, (40, 64))
 
     def test_standard_names(self):
         '''
@@ -188,6 +188,15 @@ class TestGliderCheck(unittest.TestCase):
         '''
         dataset = self.get_dataset(STATIC_FILES['bad_metadata'])
         result = self.check.check_global_attributes(dataset)
-        self.assertEqual(result.value, (41, 64))
+        self.assertEqual(result.value, (40, 64))
         self.assertIn(('sea_name attribute should be from the NODC sea names list:'
                        '   is not a valid sea name'), result.msgs)
+
+    def test_platform_type(self):
+        '''
+        Tests that platform_type check is applied
+        '''
+        dataset = self.get_dataset(STATIC_FILES['bad_metadata'])
+        result = self.check.check_global_attributes(dataset)
+        self.assertIn(('platform_type Slocum is not one of the NCEI accepted platforms for archiving: {}'
+            ).format(",".join(self.check.acceptable_platform_types)), result.msgs)
