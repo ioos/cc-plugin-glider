@@ -376,7 +376,7 @@ variables:
 		:license = "This data may be redistributed and used without restriction.  Data provided as is with no expressed or implied assurance of quality assurance or quality control" ;
 		:metadata_link = " " ;
 		:naming_authority = "edu.rutgers.marine" ;
-		:platform_type = "Slocum Glider" ;
+		:platform_type = "Slocum" ;
 		:processing_level = " " ;
 		:project = " " ;
 		:publisher_email = " " ;

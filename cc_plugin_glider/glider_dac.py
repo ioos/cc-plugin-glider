@@ -20,7 +20,18 @@ except NameError:
 
 class GliderCheck(BaseNCCheck):
     register_checker = True
+    _cc_spec_version = '3.0'
+    _cc_display_headers = {
+        3: 'Required',
+        2: 'Recommended',
+        1: 'Suggested'
+    }
     name = 'gliderdac'
+    acceptable_platform_types = {
+        'Seaglider',
+        'Spray Glider',
+        'Slocum Glider'
+    }
 
     @classmethod
     def beliefs(cls):
@@ -56,7 +67,7 @@ class GliderCheck(BaseNCCheck):
         '''
         Validates that lat and lon are valid timeseries variables
         '''
-        level = BaseCheck.MEDIUM
+        level = BaseCheck.HIGH
         out_of = 26
         score = 0
         messages = []
@@ -215,14 +226,14 @@ class GliderCheck(BaseNCCheck):
             'license',
             'metadata_link',
             'naming_authority',
-            'platform_type',
+            # 'platform_type', # platform_type check is more involved below
             'processing_level',
             'project',
             'publisher_email',
             'publisher_name',
             'publisher_url',
             'references',
-            # 'sea_name',  #sea_name check is more involved below
+            # 'sea_name',  # sea_name check is more involved below
             'source',
             'standard_name_vocabulary',
             'summary',
@@ -267,8 +278,25 @@ class GliderCheck(BaseNCCheck):
             out_of += 1
             messages.append('sea_name global attribute is missing')
 
+        # Check the platform type
+        platform_type = getattr(dataset, 'platform_type', '')
+        if platform_type:
+            # Score a point for the fact that the attribute exists
+            score += 1
+            out_of += 1
+            # Now check that it's one of the NCEI acceptable strings
+            test = platform_type in self.acceptable_platform_types
+            score += int(test)
+            out_of += 1
+            if not test:
+                messages.append(('platform_type {} is not one of the NCEI accepted platforms for archiving: {}'
+                                 ).format(platform_type, ",".join(self.acceptable_platform_types)))
+        else:
+            out_of += 1
+            messages.append('platform_type global attribute is missing')
+
         return self.make_result(level, score, out_of,
-                                'Required Global Attributes', messages)
+                                'Recommended Global Attributes', messages)
 
     def check_wmo(self, dataset):
         '''
@@ -341,7 +369,7 @@ class GliderCheck(BaseNCCheck):
                                     (var, attribute))
 
         return self.make_result(level, score, out_of,
-                                'Required Variable Attributes', messages)
+                                'Recommended Variable Attributes', messages)
 
     def check_dimensions(self, dataset):
         '''
@@ -804,7 +832,7 @@ class GliderCheck(BaseNCCheck):
         for container_var in data_struct:
             test = container_var in dataset.variables
             if not test:
-                messages.append("Required Variable %s is missing" %
+                messages.append("Variable %s is missing" %
                                 container_var)
                 continue
 
