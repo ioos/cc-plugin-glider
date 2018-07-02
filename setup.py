@@ -4,7 +4,6 @@ import os
 
 from setuptools import setup, find_packages
 
-
 def extract_version(module='cc_plugin_glider'):
     version = None
     fdir = os.path.dirname(__file__)
@@ -28,7 +27,7 @@ reqs = [line.strip() for line in open('requirements.txt')]
 
 
 setup(name="cc-plugin-glider",
-      version=extract_version(),
+      version=versioneer.get_version(),
       description="Compliance Checker Glider DAC plugin",
       long_description=readme(),
       license='Apache License 2.0',
@@ -48,4 +47,6 @@ setup(name="cc-plugin-glider",
           'Programming Language :: Python',
           'Topic :: Scientific/Engineering'],
       entry_points={'compliance_checker.suites':
-                    ['gliderdac = cc_plugin_glider.glider_dac:GliderCheck']})
+                    ['gliderdac = cc_plugin_glider.glider_dac:GliderCheck']},
+                    cmdclass=versioneer.get_cmdclass(),
+      )

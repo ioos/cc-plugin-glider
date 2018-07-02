@@ -2,3 +2,5 @@ include *.txt
 include README.md
 include cc_plugin_glider/data/*.csv
 include cc_plugin_glider/tests/data/gliders/*.cdl
+include versioneer.py
+include cc_plugin_glider/_version.py
