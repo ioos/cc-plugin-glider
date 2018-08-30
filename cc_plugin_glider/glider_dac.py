@@ -9,6 +9,7 @@ https://github.com/ioos/ioosngdac/wiki
 
 from __future__ import (absolute_import, division, print_function)
 from cc_plugin_glider import util
+from compliance_checker import __version__
 from compliance_checker.base import BaseCheck, BaseNCCheck, Result, TestCtx
 import numpy as np
 
@@ -22,6 +23,8 @@ class GliderCheck(BaseNCCheck):
     register_checker = True
     _cc_spec = 'gliderdac'
     _cc_spec_version = '3.0'
+    _cc_checker_version = __version__
+    _cc_url = 'https://github.com/ioos/ioosngdac/wiki/NGDAC-NetCDF-File-Format-Version-2'
     _cc_display_headers = {
         3: 'Required',
         2: 'Recommended',
