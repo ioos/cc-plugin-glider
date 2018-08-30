@@ -20,13 +20,13 @@ except NameError:
 
 class GliderCheck(BaseNCCheck):
     register_checker = True
+    _cc_spec = 'gliderdac'
     _cc_spec_version = '3.0'
     _cc_display_headers = {
         3: 'Required',
         2: 'Recommended',
         1: 'Suggested'
     }
-    name = 'gliderdac'
     acceptable_platform_types = {
         'Seaglider',
         'Spray Glider',
