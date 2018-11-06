@@ -11,7 +11,11 @@ from __future__ import (absolute_import, division, print_function)
 from cc_plugin_glider import util
 from compliance_checker import __version__
 from compliance_checker.base import BaseCheck, BaseNCCheck, Result, TestCtx
+from six.moves.urllib.parse import urljoin
+import six
 import numpy as np
+import requests
+import warnings
 
 try:
     basestring
@@ -46,6 +50,13 @@ class GliderCheck(BaseNCCheck):
     @classmethod
     def make_result(cls, level, score, out_of, name, messages):
         return Result(level, (score, out_of), name, messages)
+
+    @classmethod
+    def get_ncei_table(cls, url):
+        """returns the NCEI table as a set"""
+        resp = requests.get(url)
+        resp.raise_for_status()
+        return {line for line in resp.iter_lines(decode_unicode=True)}
 
     def setup(self, dataset):
         pass
@@ -996,6 +1007,72 @@ class GliderCheck(BaseNCCheck):
         valid_min = getattr(longitude, 'valid_min')
         valid_max = getattr(longitude, 'valid_max')
         test_ctx.assert_true(not(valid_min == -90 and valid_max == 90),
-                             "Longitude's valid_min and valid_max are [-90, 90], it's likey this "
+                             "Longitude's valid_min and valid_max are [-90, 90], it's likely this "
                              "was a mistake")
+        return test_ctx.to_result()
+
+    def check_ncei_tables(self, dataset):
+        test_ctx = TestCtx(BaseCheck.LOW, "File has NCEI approved project, "
+                                          "institution, platform_type, and "
+                                          "instrument")
+        ncei_base_table_url = 'https://gliders.ioos.us/ncei_authority_tables/'
+        # might refactor if the authority tables names change
+        table_type = {'project': 'projects.txt',
+                      'instrument': 'instruments.txt',
+                      'institution': 'institutions.txt'}
+        for global_att_name, table_file in six.iteritems(table_type):
+            # instruments have to be handled specially since they aren't
+            # global attributes
+            if global_att_name != 'instrument':
+                global_att_present = hasattr(dataset, global_att_name)
+                test_ctx.assert_true(global_att_present,
+                                    "Attribute {} not in dataset".format(
+                                        global_att_name))
+                if not global_att_present:
+                    continue
+
+            table_loc = urljoin(ncei_base_table_url, table_file)
+            try:
+                check_set = GliderCheck.get_ncei_table(table_loc)
+            except requests.RequestError as e:
+                warnings.warn("Hit exception while processing {}, skipping. "
+                              "{}".format(table_file, str(e)))
+                # should this be considered a failure?
+                continue
+
+            # not truly a global attribute here, needs special handling for
+            # instrument case
+            if global_att_name == 'instrument':
+                # variables which contain an instrument attribute,
+                # which should point to an instrument variable
+                instr_vars = dataset.get_variables_by_attributes(instrument=lambda v: v is not None)
+                instr_var_names = {v.instrument for v in instr_vars}
+                # is a zero length instrument array considered an issue?
+                # potentially, there could be more than one instrument
+                for instr_var_name in {v.instrument for v in instr_vars}:
+                    #if instr_var_name not in dataset.variables:
+                    if instr_var_name not in dataset.variables:
+                        test_ctx.assert_true(False,
+                                            "Referenced instrument variable "
+                                            "variable {} does not "
+                                            "exist ".format(instr_var_name))
+                        continue
+
+                    instr_var = dataset.variables[instr_var_name]
+                    make_model = getattr(instr_var, 'make_model')
+                    #if 'platform' in dataset:
+                    test_ctx.assert_true(make_model in check_set,
+                                        "Instrument make/model '{}' for "
+                                        "variable {} not contained "
+                                         "in {}".format(make_model,
+                                                        instr_var_name,
+                                                        table_loc))
+
+            else:
+                test_ctx.assert_true(getattr(dataset, global_att_name) in check_set,
+                                    "Global attribute {} value '{}' not contained "
+                                    "in {}".format(global_att_name,
+                                                    getattr(dataset,
+                                                            global_att_name),
+                                                    table_loc))
         return test_ctx.to_result()
