@@ -4,7 +4,10 @@ import unittest
 from cc_plugin_glider.tests.resources import STATIC_FILES
 from netCDF4 import Dataset
 
+from compliance_checker.tests.helpers import MockTimeSeries
 from ..glider_dac import GliderCheck
+import requests_mock
+from six.moves.urllib.parse import urljoin
 
 try:
     basestring
@@ -200,3 +203,56 @@ class TestGliderCheck(unittest.TestCase):
         result = self.check.check_global_attributes(dataset)
         self.assertIn(('platform_type Slocum is not one of the NCEI accepted platforms for archiving: {}'
             ).format(",".join(self.check.acceptable_platform_types)), result.msgs)
+
+    def test_ncei_compliance(self):
+        """Tests that the NCEI compliance suite works"""
+
+
+        ncei_base_table_url = 'https://gliders.ioos.us/ncei_authority_tables/'
+        # this is only a small subset
+        institutions = """MARACOOS
+University of Delaware
+Woods Hole Oceanographic Institution"""
+
+        projects = """MARACOOS"""
+
+        instrument_makes = """Seabird GCTD
+Sea-Bird 41CP
+Sea-Bird GCTD
+Seabird GPCTD"""
+        mock_nc_file = MockTimeSeries()
+        mock_nc_file.project = 'MARACOOS'
+        mock_nc_file.institution = 'MARACOOS'
+        instrument_var = mock_nc_file.createVariable('instrument', 'i', ())
+        instrument_var.make_model = 'Sea-Bird GCTD'
+        mock_nc_file.variables['depth'].instrument = 'instrument'
+
+        with requests_mock.Mocker() as mock:
+            mock.get(urljoin(ncei_base_table_url, 'institutions.txt'),
+                     text=institutions)
+            mock.get(urljoin(ncei_base_table_url, 'projects.txt'),
+                     text=projects)
+            mock.get(urljoin(ncei_base_table_url, 'instruments.txt'),
+                     text=instrument_makes)
+            result = self.check.check_ncei_tables(mock_nc_file)
+            # everything should pass here
+            self.assertEqual(result.value[0], result.value[1])
+            # now change to values that should fail
+            mock_nc_file.project = 'N/A'
+            mock_nc_file.institution = 'N/A'
+            # set instrument_var make_model to something not contained in the
+            # list
+            instrument_var.make_model = 'Unknown'
+            # create a dummy variable which points to an instrument that doesn't
+            # exist
+            dummy_var = mock_nc_file.createVariable('dummy', 'i', ())
+            dummy_var.instrument = 'nonexistent_var_name'
+            result_fail = self.check.check_ncei_tables(mock_nc_file)
+            expected_msg_set = {
+                "Global attribute project value 'N/A' not contained in https://gliders.ioos.us/ncei_authority_tables/projects.txt",
+                "Global attribute institution value 'N/A' not contained in https://gliders.ioos.us/ncei_authority_tables/institutions.txt",
+                "Instrument make/model 'Unknown' for variable instrument not contained in https://gliders.ioos.us/ncei_authority_tables/instruments.txt",
+                "Instrument make/model 'Unknown' for variable instrument not contained in https://gliders.ioos.us/ncei_authority_tables/instruments.txt",
+                "Referenced instrument variable nonexistent_var_name does not exist"
+            }
+            self.assertSetEqual(expected_msg_set, set(result_fail.msgs))

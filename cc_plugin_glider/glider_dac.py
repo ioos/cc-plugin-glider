@@ -1045,21 +1045,20 @@ class GliderCheck(BaseNCCheck):
             if global_att_name == 'instrument':
                 # variables which contain an instrument attribute,
                 # which should point to an instrument variable
-                instr_vars = dataset.get_variables_by_attributes(instrument=lambda v: v is not None)
-                instr_var_names = {v.instrument for v in instr_vars}
+                instr_att_vars = dataset.get_variables_by_attributes(instrument=lambda v: v is not None)
                 # is a zero length instrument array considered an issue?
                 # potentially, there could be more than one instrument
-                for instr_var_name in {v.instrument for v in instr_vars}:
+                for instr_var_name in {v.instrument for v in instr_att_vars}:
                     #if instr_var_name not in dataset.variables:
                     if instr_var_name not in dataset.variables:
                         test_ctx.assert_true(False,
                                             "Referenced instrument variable "
-                                            "variable {} does not "
-                                            "exist ".format(instr_var_name))
+                                            "{} does not exist".format(
+                                                instr_var_name))
                         continue
 
                     instr_var = dataset.variables[instr_var_name]
-                    make_model = getattr(instr_var, 'make_model')
+                    make_model = getattr(instr_var, 'make_model', None)
                     #if 'platform' in dataset:
                     test_ctx.assert_true(make_model in check_set,
                                         "Instrument make/model '{}' for "
@@ -1069,7 +1068,8 @@ class GliderCheck(BaseNCCheck):
                                                         table_loc))
 
             else:
-                test_ctx.assert_true(getattr(dataset, global_att_name) in check_set,
+                test_ctx.assert_true(getattr(dataset, global_att_name, None)
+                                     in check_set,
                                     "Global attribute {} value '{}' not contained "
                                     "in {}".format(global_att_name,
                                                     getattr(dataset,
