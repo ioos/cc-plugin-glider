@@ -216,6 +216,8 @@ Woods Hole Oceanographic Institution"""
 
         projects = """MARACOOS"""
 
+        platforms = """Test123"""
+
         instrument_makes = """Seabird GCTD
 Sea-Bird 41CP
 Sea-Bird GCTD
@@ -226,12 +228,17 @@ Seabird GPCTD"""
         instrument_var = mock_nc_file.createVariable('instrument', 'i', ())
         instrument_var.make_model = 'Sea-Bird GCTD'
         mock_nc_file.variables['depth'].instrument = 'instrument'
+        mock_nc_file.variables['depth'].platform = 'platform'
+        platform_var = mock_nc_file.createVariable('platform', 'i', ())
+        platform_var.id = "Test123"
 
         with requests_mock.Mocker() as mock:
             mock.get(urljoin(ncei_base_table_url, 'institutions.txt'),
                      text=institutions)
             mock.get(urljoin(ncei_base_table_url, 'projects.txt'),
                      text=projects)
+            mock.get(urljoin(ncei_base_table_url, 'platforms.txt'),
+                     text=platforms)
             mock.get(urljoin(ncei_base_table_url, 'instruments.txt'),
                      text=instrument_makes)
             result = self.check.check_ncei_tables(mock_nc_file)
@@ -243,16 +250,19 @@ Seabird GPCTD"""
             # set instrument_var make_model to something not contained in the
             # list
             instrument_var.make_model = 'Unknown'
+            platform_var.id = 'No platform'
             # create a dummy variable which points to an instrument that doesn't
             # exist
             dummy_var = mock_nc_file.createVariable('dummy', 'i', ())
             dummy_var.instrument = 'nonexistent_var_name'
+            dummy_var.platform = 'nonexistent_var_name_2'
             result_fail = self.check.check_ncei_tables(mock_nc_file)
             expected_msg_set = {
                 "Global attribute project value 'N/A' not contained in https://gliders.ioos.us/ncei_authority_tables/projects.txt",
                 "Global attribute institution value 'N/A' not contained in https://gliders.ioos.us/ncei_authority_tables/institutions.txt",
-                "Instrument make/model 'Unknown' for variable instrument not contained in https://gliders.ioos.us/ncei_authority_tables/instruments.txt",
-                "Instrument make/model 'Unknown' for variable instrument not contained in https://gliders.ioos.us/ncei_authority_tables/instruments.txt",
-                "Referenced instrument variable nonexistent_var_name does not exist"
+                "Attribute make_model 'Unknown' for variable instrument not contained in https://gliders.ioos.us/ncei_authority_tables/instruments.txt",
+                "Referenced instrument variable nonexistent_var_name does not exist",
+                "Attribute id 'No platform' for variable platform not contained in https://gliders.ioos.us/ncei_authority_tables/platforms.txt",
+                "Referenced platform variable nonexistent_var_name_2 does not exist"
             }
             self.assertSetEqual(expected_msg_set, set(result_fail.msgs))

@@ -1012,18 +1012,27 @@ class GliderCheck(BaseNCCheck):
         return test_ctx.to_result()
 
     def check_ncei_tables(self, dataset):
+        """
+        Checks the project, platform id, instrument make_model, and institution
+        against lists of values provided by NCEI
+        """
         test_ctx = TestCtx(BaseCheck.LOW, "File has NCEI approved project, "
                                           "institution, platform_type, and "
                                           "instrument")
         ncei_base_table_url = 'https://gliders.ioos.us/ncei_authority_tables/'
         # might refactor if the authority tables names change
         table_type = {'project': 'projects.txt',
+                      'platform': 'platforms.txt',
                       'instrument': 'instruments.txt',
                       'institution': 'institutions.txt'}
+        # some top level attrs map to other things
+        var_remap = {'platform': 'id',
+                     'instrument': 'make_model'}
+
         for global_att_name, table_file in six.iteritems(table_type):
             # instruments have to be handled specially since they aren't
             # global attributes
-            if global_att_name != 'instrument':
+            if global_att_name not in {'instrument', 'platform'}:
                 global_att_present = hasattr(dataset, global_att_name)
                 test_ctx.assert_true(global_att_present,
                                     "Attribute {} not in dataset".format(
@@ -1042,29 +1051,35 @@ class GliderCheck(BaseNCCheck):
 
             # not truly a global attribute here, needs special handling for
             # instrument case
-            if global_att_name == 'instrument':
+            if global_att_name in {'instrument', 'platform'}:
                 # variables which contain an instrument attribute,
                 # which should point to an instrument variable
-                instr_att_vars = dataset.get_variables_by_attributes(instrument=lambda v: v is not None)
-                # is a zero length instrument array considered an issue?
+                kwargs = {global_att_name: lambda v: v is not None}
+                att_vars = dataset.get_variables_by_attributes(**kwargs)
                 # potentially, there could be more than one instrument
-                for instr_var_name in {v.instrument for v in instr_att_vars}:
-                    #if instr_var_name not in dataset.variables:
-                    if instr_var_name not in dataset.variables:
+                var_name_set = {getattr(v, global_att_name) for v in att_vars}
+
+                # treat no instruments/platforms defined as an error
+                test_ctx.assert_true(len(var_name_set) > 0,
+                                     "Cannot find any {} attributes "
+                                     "in dataset".format(global_att_name))
+
+                for var_name in var_name_set:
+                    if var_name not in dataset.variables:
                         test_ctx.assert_true(False,
-                                            "Referenced instrument variable "
+                                            "Referenced {} variable "
                                             "{} does not exist".format(
-                                                instr_var_name))
+                                                global_att_name, var_name))
                         continue
 
-                    instr_var = dataset.variables[instr_var_name]
-                    make_model = getattr(instr_var, 'make_model', None)
-                    #if 'platform' in dataset:
-                    test_ctx.assert_true(make_model in check_set,
-                                        "Instrument make/model '{}' for "
+                    var = dataset.variables[var_name]
+                    search_attr = getattr(var, var_remap[global_att_name],
+                                          None)
+                    test_ctx.assert_true(search_attr in check_set,
+                                        "Attribute {} '{}' for "
                                         "variable {} not contained "
-                                         "in {}".format(make_model,
-                                                        instr_var_name,
+                                         "in {}".format(var_remap[global_att_name],
+                                                        search_attr, var_name,
                                                         table_loc))
 
             else:
