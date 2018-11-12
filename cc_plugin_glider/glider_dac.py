@@ -11,7 +11,11 @@ from __future__ import (absolute_import, division, print_function)
 from cc_plugin_glider import util
 from compliance_checker import __version__
 from compliance_checker.base import BaseCheck, BaseNCCheck, Result, TestCtx
+from six.moves.urllib.parse import urljoin
+import six
 import numpy as np
+import requests
+import warnings
 
 try:
     basestring
@@ -46,6 +50,13 @@ class GliderCheck(BaseNCCheck):
     @classmethod
     def make_result(cls, level, score, out_of, name, messages):
         return Result(level, (score, out_of), name, messages)
+
+    @classmethod
+    def get_ncei_table(cls, url):
+        """returns the NCEI table as a set"""
+        resp = requests.get(url)
+        resp.raise_for_status()
+        return {line for line in resp.iter_lines(decode_unicode=True)}
 
     def setup(self, dataset):
         pass
@@ -996,6 +1007,95 @@ class GliderCheck(BaseNCCheck):
         valid_min = getattr(longitude, 'valid_min')
         valid_max = getattr(longitude, 'valid_max')
         test_ctx.assert_true(not(valid_min == -90 and valid_max == 90),
-                             "Longitude's valid_min and valid_max are [-90, 90], it's likey this "
+                             "Longitude's valid_min and valid_max are [-90, 90], it's likely this "
                              "was a mistake")
+        return test_ctx.to_result()
+
+    def check_ncei_tables(self, dataset):
+        """
+        Checks the project, platform id, instrument make_model, and institution
+        against lists of values provided by NCEI
+        """
+        test_ctx = TestCtx(BaseCheck.LOW, "File has NCEI approved project, "
+                                          "institution, platform_type, and "
+                                          "instrument")
+        ncei_base_table_url = 'https://gliders.ioos.us/ncei_authority_tables/'
+        # might refactor if the authority tables names change
+        table_type = {'project': 'projects.txt',
+                      'platform': 'platforms.txt',
+                      'instrument': 'instruments.txt',
+                      'institution': 'institutions.txt'}
+        # some top level attrs map to other things
+        var_remap = {'platform': 'id',
+                     'instrument': 'make_model'}
+
+        for global_att_name, table_file in six.iteritems(table_type):
+            # instruments have to be handled specially since they aren't
+            # global attributes
+            if global_att_name not in {'instrument', 'platform'}:
+                global_att_present = hasattr(dataset, global_att_name)
+                test_ctx.assert_true(global_att_present,
+                                    "Attribute {} not in dataset".format(
+                                        global_att_name))
+                if not global_att_present:
+                    continue
+
+            table_loc = urljoin(ncei_base_table_url, table_file)
+            try:
+                check_set = GliderCheck.get_ncei_table(table_loc)
+            except requests.RequestError as e:
+                warnings.warn("Hit exception while processing {}, skipping. "
+                              "{}".format(table_file, str(e)))
+                # should this be considered a failure?
+                continue
+
+            # not truly a global attribute here, needs special handling for
+            # instrument case
+            if global_att_name in {'instrument', 'platform'}:
+                # variables which contain an instrument attribute,
+                # which should point to an instrument variable
+                kwargs = {global_att_name: lambda v: v is not None}
+                att_vars = dataset.get_variables_by_attributes(**kwargs)
+                # potentially, there could be more than one instrument
+                var_name_set = {getattr(v, global_att_name) for v in att_vars}
+
+                # treat no instruments/platforms defined as an error
+                test_ctx.assert_true(len(var_name_set) > 0,
+                                     "Cannot find any {} attributes "
+                                     "in dataset".format(global_att_name))
+
+                for var_name in var_name_set:
+                    if var_name not in dataset.variables:
+                        test_ctx.assert_true(False,
+                                            "Referenced {} variable "
+                                            "{} does not exist".format(
+                                                global_att_name, var_name))
+                        continue
+
+                    var = dataset.variables[var_name]
+                    # have to use .ncattrs, hangs if using `in var` ?
+                    var_attr_exists = (var_remap[global_att_name] in
+                                       var.ncattrs())
+                    test_ctx.assert_true(var_attr_exists,
+                                        "Attribute {} should exist in variable "
+                                        "{}".format(var_remap[global_att_name],
+                                                    var_name))
+                    if not var_attr_exists:
+                        continue
+                    search_attr = getattr(var, var_remap[global_att_name])
+                    test_ctx.assert_true(search_attr in check_set,
+                                        "Attribute {} '{}' for "
+                                        "variable {} not contained "
+                                        "in {}".format(var_remap[global_att_name],
+                                                        search_attr, var_name,
+                                                        table_loc))
+
+            else:
+                # check for global attribute existence already handled above
+                global_att_value = getattr(dataset, global_att_name)
+                test_ctx.assert_true(global_att_value in check_set,
+                                    "Global attribute {} value '{}' not "
+                                    "contained in {}".format(global_att_name,
+                                                              global_att_value,
+                                                              table_loc))
         return test_ctx.to_result()
