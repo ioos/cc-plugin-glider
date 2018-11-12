@@ -266,3 +266,18 @@ Seabird GPCTD"""
                 "Referenced platform variable nonexistent_var_name_2 does not exist"
             }
             self.assertSetEqual(expected_msg_set, set(result_fail.msgs))
+            # remove attributes which need to be checked to see if properly
+            # detected
+            del (instrument_var.make_model, platform_var.id,
+                 mock_nc_file.project, mock_nc_file.institution)
+            missing_attr_results = self.check.check_ncei_tables(mock_nc_file)
+            expected_missing_msgs = {
+                "Attribute project not in dataset",
+                "Attribute institution not in dataset",
+                "Attribute make_model should exist in variable instrument",
+                "Attribute id should exist in variable platform"
+            }
+            # check that all the missing attribute messages are contained in the
+            # test results
+            self.assertTrue(expected_missing_msgs <=
+                             set(missing_attr_results.msgs))

@@ -1073,21 +1073,29 @@ class GliderCheck(BaseNCCheck):
                         continue
 
                     var = dataset.variables[var_name]
-                    search_attr = getattr(var, var_remap[global_att_name],
-                                          None)
+                    # have to use .ncattrs, hangs if using `in var` ?
+                    var_attr_exists = (var_remap[global_att_name] in
+                                       var.ncattrs())
+                    test_ctx.assert_true(var_attr_exists,
+                                        "Attribute {} should exist in variable "
+                                        "{}".format(var_remap[global_att_name],
+                                                    var_name))
+                    if not var_attr_exists:
+                        continue
+                    search_attr = getattr(var, var_remap[global_att_name])
                     test_ctx.assert_true(search_attr in check_set,
                                         "Attribute {} '{}' for "
                                         "variable {} not contained "
-                                         "in {}".format(var_remap[global_att_name],
+                                        "in {}".format(var_remap[global_att_name],
                                                         search_attr, var_name,
                                                         table_loc))
 
             else:
-                test_ctx.assert_true(getattr(dataset, global_att_name, None)
-                                     in check_set,
-                                    "Global attribute {} value '{}' not contained "
-                                    "in {}".format(global_att_name,
-                                                    getattr(dataset,
-                                                            global_att_name),
-                                                    table_loc))
+                # check for global attribute existence already handled above
+                global_att_value = getattr(dataset, global_att_name)
+                test_ctx.assert_true(global_att_value in check_set,
+                                    "Global attribute {} value '{}' not "
+                                    "contained in {}".format(global_att_name,
+                                                              global_att_value,
+                                                              table_loc))
         return test_ctx.to_result()
