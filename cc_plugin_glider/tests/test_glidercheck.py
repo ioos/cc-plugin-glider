@@ -8,6 +8,7 @@ from compliance_checker.tests.helpers import MockTimeSeries
 from ..glider_dac import GliderCheck
 import requests_mock
 from six.moves.urllib.parse import urljoin
+import numpy as np
 
 try:
     basestring
@@ -184,6 +185,48 @@ class TestGliderCheck(unittest.TestCase):
         dataset = self.get_dataset(STATIC_FILES['no_qc'])
         result = self.check.check_time_series_variables(dataset)
         assert result.value == (7, 7)
+
+    def test_time_monotonically_increasing(self):
+        """Checks that the time variable is monotonically increasing"""
+        ts = MockTimeSeries()
+        # first check failure case
+        ts.variables['time'][:] = np.zeros(500)
+        result = self.check.check_if_monotonically_increasing(ts)
+        self.assertLess(result.value[0], result.value[1])
+        # now make a monotonically increasing time variable
+        ts.variables['time'][:] = np.linspace(1, 500, 500)
+        result = self.check.check_if_monotonically_increasing(ts)
+        self.assertEqual(result.value[0], result.value[1])
+
+    def test_time_depth_non_nan(self):
+        """
+        Check that the cartesian product of time and depth coordinate variables
+        have at least two non-NaN combinations
+        """
+        ts = MockTimeSeries()
+        ts.variables['time'][0] = 0
+        ts.variables['depth'][0] = 5
+        # cartesian product should only contain one element and fail
+        result = self.check.check_dim_nodata(ts)
+        self.assertLess(result.value[0], result.value[1])
+        # adding one more coordinate variable should make the number of passing
+        # combinations equal to two, which should pass this check
+        ts.variables['time'][1] = 1
+        result = self.check.check_dim_nodata(ts)
+        self.assertEqual(result.value[0], result.value[1])
+
+    def test_depth_diff(self):
+        """
+        Checks that the sum of the first order difference over the start to
+        the end time is non-negligible
+        """
+        ts = MockTimeSeries()
+        ts.variables['depth'][:] = np.zeros(500)
+        result = self.check.check_sum_depth(ts)
+        self.assertLess(result.value[0], result.value[1])
+        ts.variables['depth'][:] = np.linspace(1, 500, 500)
+        result = self.check.check_sum_depth(ts)
+        self.assertEqual(result.value[0], result.value[1])
 
     def test_seanames(self):
         '''

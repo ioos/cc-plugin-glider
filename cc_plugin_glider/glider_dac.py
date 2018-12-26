@@ -16,6 +16,7 @@ import six
 import numpy as np
 import requests
 import warnings
+from cf_units import Unit
 
 try:
     basestring
@@ -59,6 +60,7 @@ class GliderCheck(BaseNCCheck):
         return {line for line in resp.iter_lines(decode_unicode=True)}
 
     def setup(self, dataset):
+        self.dataset = dataset
         pass
 
     def check_locations(self, dataset):
@@ -375,7 +377,8 @@ class GliderCheck(BaseNCCheck):
         ]
         for var in primary_variables:
             for attribute in required_attributes:
-                test = hasattr(dataset.variables[var], attribute)
+                test = (var in dataset.variables and
+                        hasattr(dataset.variables[var], attribute))
                 out_of += 1
                 score += int(test)
                 if not test:
@@ -409,6 +412,120 @@ class GliderCheck(BaseNCCheck):
                 messages.append('%s is not a valid dimension' % dimension)
         return self.make_result(level, score, out_of,
                                 'Required Dimensions', messages)
+
+
+    def check_existing_varnames(self, ds):
+        is_passing = True
+        messages = []
+        existing_varnames = {'trajectory': {},
+                             'wmo_id': {},
+                             'profile_id': {},
+                             'profile_time': {'standard_name': 'time',
+                                              'units': 'seconds since 1970-01-01T00:00:00Z'
+                                             },
+                             'profile_lat': {'standard_name': 'latitude',
+                                             'units': 'degrees_north'},
+                             'profile_lon': {'standard_name': 'longitude',
+                                             'units': 'degrees_east'},
+                             'time': {'standard_name': 'time',
+                                      'units': 'seconds since 1970-01-01T00:00:00Z'},
+                             'depth': {'standard_name':
+                                       'depth'},
+                             'pressure': {'standard_name':
+                                          'sea_water_pressure'},
+                             'temperature': {'standard_name':
+                                             'sea_water_temperature',
+                                             'units': 'degrees_C'},
+                             'conductivity': {'standard_name':
+                                              'sea_water_electrical_conductivity'},
+                             'salinity': {'standard_name':
+                                          'sea_water_practical_salinity'},
+                             'density': {'standard_name':
+                                         'sea_water_density'},
+                             'lat': {'standard_name': 'latitude',
+                                     'units': 'degrees_north'},
+                             'lon': {'standard_name': 'longitude',
+                                     'units': 'degrees_east'},
+                             'time_uv': {'standard_name': 'time',
+                                         'units': 'seconds since 1970-01-01T00:00:00Z'
+                                        },
+                             'lat_uv': {'standard_name': 'latitude',
+                                        'units': 'degrees_north'},
+                             'lon_uv': {'standard_name': 'longitude',
+                                        'units': 'degrees_east'},
+                             'u': {'standard_name':
+                                   'eastward_sea_water_velocity',
+                                   'units': 'm s-1'},
+                             'v': {'standard_name':
+                                   'northward_sea_water_velocity',
+                                   'units': 'm s-1'},
+                             'platform': {},
+                             'instrument_ctd': {}}
+        for var_name in existing_varnames:
+            if var_name not in ds.variables:
+                messages.append("Required Variable {} is missing".format(var_name))
+                is_passing = False
+            else:
+                var = ds.variables[var_name]
+                if '_FillValue' not in var:
+                    messages.append("Variable {} must have a _FillValue attribute".format(var_name))
+                    is_passing = False
+            sub_dict = existing_varnames[var_name]
+            if 'standard_name' in sub_dict:
+                if (getattr(var, 'standard_name', None) !=
+                    sub_dict['standard_name']):
+                    messages.append("Variable {} must have a standard_name of {}".format(var_name,
+                                                                                         sub_dict['standard_name']))
+                    is_passing = False
+
+            if 'units' in sub_dict:
+                comp_unit = Unit(sub_dict['units'])
+                if not Unit(getattr(var, 'units',
+                                    None)).is_convertible(comp_unit):
+                    messages.append("Variable {} must have units attribute and be "
+                                    "convertible to {}".format(var_name,
+                                                                comp_unit))
+                    is_passing = False
+
+        return self.make_result(BaseCheck.MEDIUM, int(is_passing), 1,
+                                'Required glider variables present with required attributes',
+                                messages)
+
+
+    def check_if_monotonically_increasing(self, ds):
+       """Check if all times are monotonically increasing"""
+       # shouldn't this already be handled by CF trajectory featureType?
+       test_ctx = TestCtx(BaseCheck.MEDIUM, 'Monotonically increasing time')
+       test_ctx.assert_true(np.all(np.diff(ds.variables['time']) > 0),
+                            'Time is not monotonically increasing')
+       return test_ctx.to_result()
+
+    def check_dim_nodata(self, dataset):
+        """
+        Gets the transposed cartesian product of the depth and time
+        variables.
+        """
+
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Non NaN count >= 2')
+
+        # check that cartesian product of non-nodata/_FillValue values >= 2
+        non_nodata_status = (dataset.variables['time'][:].count() *
+                             dataset.variables['depth'][:].count()) >= 2
+        test_ctx.assert_true(non_nodata_status, "Cartesian product of depth "
+                             "and time coordinate variables must have at least "
+                             "two instances of time and depth which are both "
+                             "not NaN/FillValue")
+        return test_ctx.to_result()
+
+    # check abs sum of diff > 0
+    def check_sum_depth(self, dataset):
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Abs value of sum of first-order difference non-neglible')
+        np.abs(np.diff(dataset.variables['depth']).sum())
+        test_ctx.assert_true(np.abs(np.diff(dataset.variables['depth']).sum()) > 1e-4,
+                             "Sum of first order difference in depth values "
+                             "must be non-negligible (> 1e-4 m)"
+                             )
+        return test_ctx.to_result()
 
     def check_trajectory_variables(self, dataset):
         '''
