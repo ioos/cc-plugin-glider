@@ -11,6 +11,7 @@ from __future__ import (absolute_import, division, print_function)
 from cc_plugin_glider import util
 from compliance_checker import __version__
 from compliance_checker.base import BaseCheck, BaseNCCheck, Result, TestCtx
+from cc_plugin_glider.expected_format import expected_format
 from six.moves.urllib.parse import urljoin
 import six
 import numpy as np
@@ -61,7 +62,6 @@ class GliderCheck(BaseNCCheck):
 
     def setup(self, dataset):
         self.dataset = dataset
-        pass
 
     def check_locations(self, dataset):
         '''
@@ -161,12 +161,12 @@ class GliderCheck(BaseNCCheck):
         score = 0
         messages = []
         for variable in required_variables:
-            test = variable in dataset.variables
-            score += int(test)
-            if not test:
-                messages.append("%s is a required variable" % variable)
-        return self.make_result(level, score, out_of,
-                                'Required Variables', messages)
+            check_stat, msgs = self.existing_varname(variable, [],
+                                                     True)
+            score += int(check_stat)
+            messages.extend(msgs)
+        return self.make_result(level, score, out_of, 'Required Variables',
+                                messages)
 
     def check_qc_variables(self, dataset):
         '''
@@ -200,21 +200,13 @@ class GliderCheck(BaseNCCheck):
             'valid_max',
             'valid_min'
         ]
+        is_passing = True
+        messages = []
         for variable in qc_variables:
             qc_var = '{}_qc'.format(variable)
-
-            # QC varibles are no longer required
-            if qc_var not in dataset.variables:
-                continue
-
-            for field in required_attributes:
-                test = hasattr(dataset.variables[qc_var], field)
-                test_ctx.assert_true(test,
-                                     'variable {} must have a {} attribute'.format(qc_var, field))
-
-        if test_ctx.out_of == 0:
-            return None
-
+            pass_stat, msgs = self.existing_varname(qc_var,
+                                             required_attributes, True)
+            messages.extend(msgs)
         return test_ctx.to_result()
 
     def check_global_attributes(self, dataset):
@@ -369,6 +361,7 @@ class GliderCheck(BaseNCCheck):
             'u',
             'v'
         ]
+        out_of = len(primary_variables)
         required_attributes = [
             '_FillValue',
             'units',
@@ -376,14 +369,11 @@ class GliderCheck(BaseNCCheck):
             'observation_type'
         ]
         for var in primary_variables:
-            for attribute in required_attributes:
-                test = (var in dataset.variables and
-                        hasattr(dataset.variables[var], attribute))
-                out_of += 1
-                score += int(test)
-                if not test:
-                    messages.append('%s variable is missing attribute %s' %
-                                    (var, attribute))
+            check_stat, msgs = self.existing_varname(var,
+                                                required_attributes, True)
+            #out_of += 1
+            score += int(check_stat)
+            messages.extend(msgs)
 
         return self.make_result(level, score, out_of,
                                 'Recommended Variable Attributes', messages)
@@ -414,82 +404,66 @@ class GliderCheck(BaseNCCheck):
                                 'Required Dimensions', messages)
 
 
-    def check_existing_varnames(self, ds):
+    def existing_varname(self, var_name, check_attrs,
+                         check_var_exist=False, expected_dtype=None):
+        """
+        Convenience method to check that variable exists within datasets and
+        has specified attributes.  Optionally can check for a certain variable
+        dtype
+        """
         is_passing = True
         messages = []
-        existing_varnames = {'trajectory': {},
-                             'wmo_id': {},
-                             'profile_id': {},
-                             'profile_time': {'standard_name': 'time',
-                                              'units': 'seconds since 1970-01-01T00:00:00Z'
-                                             },
-                             'profile_lat': {'standard_name': 'latitude',
-                                             'units': 'degrees_north'},
-                             'profile_lon': {'standard_name': 'longitude',
-                                             'units': 'degrees_east'},
-                             'time': {'standard_name': 'time',
-                                      'units': 'seconds since 1970-01-01T00:00:00Z'},
-                             'depth': {'standard_name':
-                                       'depth'},
-                             'pressure': {'standard_name':
-                                          'sea_water_pressure'},
-                             'temperature': {'standard_name':
-                                             'sea_water_temperature',
-                                             'units': 'degrees_C'},
-                             'conductivity': {'standard_name':
-                                              'sea_water_electrical_conductivity'},
-                             'salinity': {'standard_name':
-                                          'sea_water_practical_salinity'},
-                             'density': {'standard_name':
-                                         'sea_water_density'},
-                             'lat': {'standard_name': 'latitude',
-                                     'units': 'degrees_north'},
-                             'lon': {'standard_name': 'longitude',
-                                     'units': 'degrees_east'},
-                             'time_uv': {'standard_name': 'time',
-                                         'units': 'seconds since 1970-01-01T00:00:00Z'
-                                        },
-                             'lat_uv': {'standard_name': 'latitude',
-                                        'units': 'degrees_north'},
-                             'lon_uv': {'standard_name': 'longitude',
-                                        'units': 'degrees_east'},
-                             'u': {'standard_name':
-                                   'eastward_sea_water_velocity',
-                                   'units': 'm s-1'},
-                             'v': {'standard_name':
-                                   'northward_sea_water_velocity',
-                                   'units': 'm s-1'},
-                             'platform': {},
-                             'instrument_ctd': {}}
-        for var_name in existing_varnames:
-            if var_name not in ds.variables:
-                messages.append("Required Variable {} is missing".format(var_name))
+        if check_var_exist and var_name not in self.dataset.variables:
+            messages.append("Required Variable {} is missing".format(var_name))
+            is_passing = False
+            return (is_passing, messages)
+        else:
+            var = self.dataset.variables[var_name]
+
+        if expected_dtype is not None:
+            if var.dtype != expected_dtype:
+                messages.append("Variable {} is expected to have a dtype of "
+                                "{}, has a dtype of {} instead"
+                                "".format(var_name, var.dtype,
+                                           expected_dtype))
                 is_passing = False
-            else:
-                var = ds.variables[var_name]
-                if '_FillValue' not in var:
-                    messages.append("Variable {} must have a _FillValue attribute".format(var_name))
-                    is_passing = False
-            sub_dict = existing_varnames[var_name]
-            if 'standard_name' in sub_dict:
-                if (getattr(var, 'standard_name', None) !=
-                    sub_dict['standard_name']):
+
+
+        sub_dict = expected_format.get(var_name, {})
+        var_attrs = set(var.ncattrs())
+        for attr in check_attrs:
+            if attr not in var_attrs:
+                messages.append("variable {} must have a {} attribute"
+                                "".format(var_name, attr))
+                is_passing = False
+                continue
+
+            if attr == 'standard_name' and 'standard_name' in sub_dict:
+                var_std_name = var.standard_name
+                if var_std_name != sub_dict['standard_name']:
                     messages.append("Variable {} must have a standard_name of {}".format(var_name,
-                                                                                         sub_dict['standard_name']))
+                                                                                            sub_dict['standard_name']))
+                    is_passing = False
+            elif attr == 'units':
+                raw_units = var.units
+                if 'units' in sub_dict:
+                    cur_unit = Unit(raw_units)
+                    comp_unit = Unit(sub_dict['units'])
+                    if not cur_unit.is_convertible(comp_unit):
+                        messages.append("Variable {} units attribute must be "
+                                        "convertible to {}".format(var_name,
+                                                                    comp_unit))
+                        is_passing = False
+            elif attr == '_FillValue':
+                if var.dtype != var._FillValue.dtype:
+                    messages.append("Variable {} _FillValue dtype does not "
+                                    "match variable dtype"
+                                    "".format(var_name, var._FillValue.dtype,
+                                              var.dtype))
                     is_passing = False
 
-            if 'units' in sub_dict:
-                comp_unit = Unit(sub_dict['units'])
-                if not Unit(getattr(var, 'units',
-                                    None)).is_convertible(comp_unit):
-                    messages.append("Variable {} must have units attribute and be "
-                                    "convertible to {}".format(var_name,
-                                                                comp_unit))
-                    is_passing = False
 
-        return self.make_result(BaseCheck.MEDIUM, int(is_passing), 1,
-                                'Required glider variables present with required attributes',
-                                messages)
+        return (is_passing, messages)
 
 
     def check_if_monotonically_increasing(self, ds):
@@ -509,6 +483,7 @@ class GliderCheck(BaseNCCheck):
         test_ctx = TestCtx(BaseCheck.MEDIUM, 'Non NaN count >= 2')
 
         # check that cartesian product of non-nodata/_FillValue values >= 2
+        # count here checks the count of non-masked data
         non_nodata_status = (dataset.variables['time'][:].count() *
                              dataset.variables['depth'][:].count()) >= 2
         test_ctx.assert_true(non_nodata_status, "Cartesian product of depth "
@@ -538,7 +513,7 @@ class GliderCheck(BaseNCCheck):
         the same value.
         '''
         level = BaseCheck.MEDIUM
-        out_of = 5
+        out_of = 2
         score = 0
         messages = []
 
@@ -552,18 +527,12 @@ class GliderCheck(BaseNCCheck):
         score += int(test)
         if not test:
             messages.append('trajectory has an invalid dimension')
-        test = hasattr(dataset.variables['trajectory'], 'cf_role')
-        score += int(test)
-        if not test:
-            messages.append('trajectory is missing cf_role')
-        test = hasattr(dataset.variables['trajectory'], 'comment')
-        score += int(test)
-        if not test:
-            messages.append('trajectory is missing comment')
-        test = hasattr(dataset.variables['trajectory'], 'long_name')
-        score += int(test)
-        if not test:
-            messages.append('trajectory is missing long_name')
+
+        pass_stat, attr_msgs = self.existing_varname('trajectory',
+                                                     ('cf_role', 'comment',
+                                                      'long_name'))
+        score += int(pass_stat)
+        messages.extend(attr_msgs)
         return self.make_result(level, score, out_of,
                                 'Trajectory Variable', messages)
 
@@ -686,11 +655,10 @@ class GliderCheck(BaseNCCheck):
 
         for field in required_attributes:
             for data_var in data_vars:
-                if not hasattr(data_vars[data_var], field):
-                    messages.append('%s variable requires attribute %s' %
-                                    (data_var, field))
-                    continue
-                score += 1
+                stat, msgs = self.existing_varname(data_var,
+                                                   required_attributes)
+                score += int(stat)
+                messages.extend(msgs)
 
         return self.make_result(level, score, out_of,
                                 'Depth/Pressure Variables', messages)
@@ -702,7 +670,7 @@ class GliderCheck(BaseNCCheck):
         '''
 
         level = BaseCheck.HIGH
-        out_of = 56
+        out_of = 4
         score = 0
         messages = []
 
@@ -728,24 +696,12 @@ class GliderCheck(BaseNCCheck):
             'valid_min'
         ]
 
+        expected_dtype = np.dtype('<f8')
         for var in variables:
-            if var not in dataset.variables:
-                messages.append('%s variable missing' % var)
-                continue
-            nc_var = dataset.variables[var]
-
-            test = nc_var.dtype.str == '<f8'
-            score += int(test)
-            if not test:
-                messages.append('%s variable is incorrect data type' % var)
-
-            for field in required_fields:
-                if not hasattr(nc_var, field):
-                    messages.append('%s variable is missing required attribute %s' % (var, field))  # noqa
-                    continue
-                score += 1
-
-            score += 1
+            check_stat, msgs = self.existing_varname(var, required_fields,
+                                                     True, expected_dtype)
+            score += int(check_stat)
+            messages.extend(msgs)
         return self.make_result(level, score, out_of, 'CTD Variables',
                                 messages)
 
@@ -757,6 +713,7 @@ class GliderCheck(BaseNCCheck):
         out_of = 1
         score = 0
         messages = []
+        # only check salinity?
         std_names = {
             'salinity': 'sea_water_practical_salinity'
         }
@@ -896,25 +853,13 @@ class GliderCheck(BaseNCCheck):
         }
 
         for profile_var in data_struct:
-            test = profile_var in dataset.variables
-            if not test:
-                messages.append("Required Variable %s is missing" %
-                                profile_var)
-                continue
-
-            nc_var = dataset.variables[profile_var]
-            dtype = np.dtype(data_struct[profile_var]['dtype'])
-            test = nc_var.dtype.str == dtype.str
-            score += int(test)
-            if not test:
-                messages.append('%s variable has incorrect dtype, should be %s' % (profile_var, dtype.name))  # noqa
-
-            for field in data_struct[profile_var]['fields']:
-                test = hasattr(nc_var, field)
-                if not test:
-                    messages.append('%s variable is missing required attribute %s' % (profile_var, field))  # noqa
-                    continue
-                score += 1
+            expected_dtype = np.dtype(data_struct[profile_var]['dtype'])
+            var_fields = data_struct[profile_var]['fields']
+            check_stat, msgs = self.existing_varname(profile_var,
+                                                     var_fields, True,
+                                                     expected_dtype)
+            score += int(check_stat)
+            messages.extend(msgs)
 
         return self.make_result(level, score, out_of,
                                 'Profile Variables', messages)
@@ -961,25 +906,13 @@ class GliderCheck(BaseNCCheck):
         }
 
         for container_var in data_struct:
-            test = container_var in dataset.variables
-            if not test:
-                messages.append("Variable %s is missing" %
-                                container_var)
-                continue
-
-            nc_var = dataset.variables[container_var]
-            dtype = np.dtype(data_struct[container_var]['dtype'])
-            test = nc_var.dtype.str == dtype.str
-            score += int(test)
-            if not test:
-                messages.append('%s variable has incorrect dtype, should be %s' % (container_var, dtype.name))  # noqa
-
-            for field in data_struct[container_var]['fields']:
-                test = hasattr(nc_var, field)
-                if not test:
-                    messages.append('%s variable is missing required attribute %s' % (container_var, field))  # noqa
-                    continue
-                score += 1
+            expected_dtype = np.dtype(data_struct[container_var]['dtype'])
+            var_fields = data_struct[container_var]['fields']
+            check_stat, msgs = self.existing_varname(container_var,
+                                                     var_fields, True,
+                                                     expected_dtype)
+            score += int(check_stat)
+            messages.extend(msgs)
 
         return self.make_result(level, score, out_of,
                                 'Container Variables', messages)
