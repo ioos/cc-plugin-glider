@@ -67,22 +67,25 @@ class TestGliderCheck(unittest.TestCase):
         Ensures the ctd checks fail for temperature
         '''
         dataset = self.get_dataset(STATIC_FILES['bad_qc'])
+        self.check.setup(dataset)
         result = self.check.check_ctd_variables(dataset)
-        self.assertEqual(result.value, (55, 56))
+        self.assertEqual(result.value, (2, 4))
 
     def test_ctd_vars(self):
         '''
         Ensures the ctd checks for the correct file
         '''
         dataset = self.get_dataset(STATIC_FILES['glider_std'])
+        self.check.setup(dataset)
         result = self.check.check_ctd_variables(dataset)
-        self.assertEqual(result.value, (56, 56))
+        self.assertEqual(result.value, (4, 4))
 
     def test_global_fail(self):
         '''
         Tests that the global checks fail where appropriate
         '''
         dataset = self.get_dataset(STATIC_FILES['bad_qc'])
+        self.check.setup(dataset)
         result = self.check.check_global_attributes(dataset)
         self.assertEqual(result.value, (41, 64))
 
@@ -153,16 +156,19 @@ class TestGliderCheck(unittest.TestCase):
 
     def test_qc_variables(self):
         dataset = self.get_dataset(STATIC_FILES['glider_std'])
+        self.check.setup(dataset)
         result = self.check.check_qc_variables(dataset)
-        assert result.value == (96, 96)
+        assert result.value == (16, 16)
 
         dataset = self.get_dataset(STATIC_FILES['glider_std3'])
+        self.check.setup(dataset)
         result = self.check.check_qc_variables(dataset)
-        assert result.value == (96, 96)
+        assert result.value == (16, 16)
 
         dataset = self.get_dataset(STATIC_FILES['bad_qc'])
+        self.check.setup(dataset)
         result = self.check.check_qc_variables(dataset)
-        assert result.value == (86, 90)
+        assert result.value == (13, 15)
         assert sorted(result.msgs) == [
             'variable depth_qc must have a flag_meanings attribute',
             'variable depth_qc must have a flag_values attribute',
@@ -171,8 +177,9 @@ class TestGliderCheck(unittest.TestCase):
         ]
 
         dataset = self.get_dataset(STATIC_FILES['no_qc'])
+        self.check.setup(dataset)
         result = self.check.check_qc_variables(dataset)
-        assert result is None
+        assert result.value == (0, 0)
 
     def test_time_series_variables(self):
         dataset = self.get_dataset(STATIC_FILES['bad_qc'])

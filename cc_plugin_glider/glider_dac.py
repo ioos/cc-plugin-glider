@@ -17,6 +17,7 @@ import six
 import numpy as np
 import requests
 import warnings
+from operator import eq
 from cf_units import Unit
 
 try:
@@ -24,6 +25,14 @@ try:
 except NameError:
     basestring = str
 
+
+def compare_dtype(dt1, dt2):
+    """
+    Helper function to compare two numpy dtypes to see if they are equivalent
+    aside from endianness.  Returns True if the two are equivalent, False
+    otherwise.
+    """
+    return eq(*(dt.kind + str(dt.itemsize) for dt in (dt1, dt2)))
 
 class GliderCheck(BaseNCCheck):
     register_checker = True
@@ -172,8 +181,7 @@ class GliderCheck(BaseNCCheck):
         '''
         Verifies the dataset has all the required QC variables
         '''
-        test_ctx = TestCtx(BaseCheck.MEDIUM, 'QC Variables')
-        qc_variables = [
+        qc_variables = ["{}_qc".format(s) for s in [
             'time',
             'lat',
             'lon',
@@ -190,7 +198,11 @@ class GliderCheck(BaseNCCheck):
             'lon_uv',
             'u',
             'v'
-        ]
+        ]]
+
+        level = BaseCheck.HIGH
+        score = 0
+        out_of = 0
 
         required_attributes = [
             'flag_meanings',
@@ -200,14 +212,16 @@ class GliderCheck(BaseNCCheck):
             'valid_max',
             'valid_min'
         ]
-        is_passing = True
         messages = []
-        for variable in qc_variables:
-            qc_var = '{}_qc'.format(variable)
-            pass_stat, msgs = self.existing_varname(qc_var,
-                                             required_attributes, True)
-            messages.extend(msgs)
-        return test_ctx.to_result()
+        for qc_var in qc_variables:
+            if qc_var in self.dataset.variables:
+                pass_stat, msgs = self.existing_varname(qc_var,
+                                                        required_attributes,
+                                                        False)
+                out_of += 1
+                score += int(pass_stat)
+                messages.extend(msgs)
+        return self.make_result(level, score, out_of, 'QC Variables', messages)
 
     def check_global_attributes(self, dataset):
         '''
@@ -409,7 +423,10 @@ class GliderCheck(BaseNCCheck):
         """
         Convenience method to check that variable exists within datasets and
         has specified attributes.  Optionally can check for a certain variable
-        dtype
+        dtype. `var_name` If check_var_exist is True, checks for the existence
+        of the variable first.  If `expected_dtype` is supplied as a numpy
+        dtype, checks that the dtype for the variable is equivalent to
+        `expected_dtype`
         """
         is_passing = True
         messages = []
@@ -421,7 +438,7 @@ class GliderCheck(BaseNCCheck):
             var = self.dataset.variables[var_name]
 
         if expected_dtype is not None:
-            if var.dtype != expected_dtype:
+            if not compare_dtype(var.dtype, expected_dtype):
                 messages.append("Variable {} is expected to have a dtype of "
                                 "{}, has a dtype of {} instead"
                                 "".format(var_name, var.dtype,
@@ -431,6 +448,7 @@ class GliderCheck(BaseNCCheck):
 
         sub_dict = expected_format.get(var_name, {})
         var_attrs = set(var.ncattrs())
+
         for attr in check_attrs:
             if attr not in var_attrs:
                 messages.append("variable {} must have a {} attribute"
@@ -455,7 +473,7 @@ class GliderCheck(BaseNCCheck):
                                                                     comp_unit))
                         is_passing = False
             elif attr == '_FillValue':
-                if var.dtype != var._FillValue.dtype:
+                if not compare_dtype(var.dtype, var._FillValue.dtype):
                     messages.append("Variable {} _FillValue dtype does not "
                                     "match variable dtype"
                                     "".format(var_name, var._FillValue.dtype,
@@ -553,7 +571,7 @@ class GliderCheck(BaseNCCheck):
             return self.make_result(level, score, out_of,
                                     'Time Series Variable', messages)
 
-        test = dataset.variables['time'].dtype.str == '<f8'
+        test = compare_dtype(dataset.variables['time'].dtype, np.dtype('f8'))
         score += int(test)
         if not test:
             msg = 'Invalid variable type for time, it should be float64'
@@ -696,7 +714,7 @@ class GliderCheck(BaseNCCheck):
             'valid_min'
         ]
 
-        expected_dtype = np.dtype('<f8')
+        expected_dtype = np.dtype('f8')
         for var in variables:
             check_stat, msgs = self.existing_varname(var, required_fields,
                                                      True, expected_dtype)
@@ -960,17 +978,21 @@ class GliderCheck(BaseNCCheck):
 
                 if isinstance(flag_values, np.ndarray):
                     dtype = flag_values.dtype.str
-                    test_ctx.assert_true(dtype == '|i1',
+                    test_ctx.assert_true(compare_dtype(dtype, np.dtype('|i1')),
                                          'attribute {}:flag_values has an illegal data-type, must '
                                          'be byte'.format(qartod_var))
 
                 valid_min_dtype = getattr(valid_min, 'dtype', None)
-                test_ctx.assert_true(getattr(valid_min_dtype, 'str', None) == '|i1',
+                test_ctx.assert_true(compare_dtype(getattr(valid_min_dtype,
+                                                           'str', None),
+                                                   np.dtype('|i1')),
                                      'attribute {}:valid_min must be of type byte'
                                      ''.format(qartod_var))
 
                 valid_max_dtype = getattr(valid_max, 'dtype', None)
-                test_ctx.assert_true(getattr(valid_max_dtype, 'str', None) == '|i1',
+                test_ctx.assert_true(compare_dtype(getattr(valid_max_dtype,
+                                                           'str', None),
+                                                   np.dtype('|i1')),
                                      'attribute {}:valid_max must be of type byte'
                                      ''.format(qartod_var))
 
@@ -1013,7 +1035,8 @@ class GliderCheck(BaseNCCheck):
                 valid_min_dtype = str(getattr(valid_min, 'dtype', None))
 
             if valid_min is not None:
-                test_ctx.assert_true(valid_min_dtype == str(ncvar.dtype),
+                test_ctx.assert_true(compare_dtype(np.dtype(valid_min_dtype),
+                                                   ncvar.dtype),
                                      '{}:valid_min has a different data type, {}, than variable {} '
                                      '{}'.format(var_name, valid_min_dtype, str(ncvar.dtype),
                                                  var_name))
@@ -1040,7 +1063,8 @@ class GliderCheck(BaseNCCheck):
                 valid_max_dtype = str(getattr(valid_max, 'dtype', None))
 
             if valid_max is not None:
-                test_ctx.assert_true(valid_max_dtype == str(ncvar.dtype),
+                test_ctx.assert_true(compare_dtype(np.dtype(valid_max_dtype),
+                                                   ncvar.dtype),
                                      '{}:valid_max has a different data type, {}, than variable {} '
                                      '{}'.format(var_name, valid_max_dtype, str(ncvar.dtype),
                                                  var_name))
