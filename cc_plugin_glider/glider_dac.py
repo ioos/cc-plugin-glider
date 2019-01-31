@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-compliance_checker.glider_dac
+cc_plugin_glider.glider_dac.py
 
 Compliance Test Suite for the IOOS National Glider Data Assembly Center
 https://github.com/ioos/ioosngdac/wiki
@@ -11,28 +11,16 @@ from __future__ import (absolute_import, division, print_function)
 from cc_plugin_glider import util
 from compliance_checker import __version__
 from compliance_checker.base import BaseCheck, BaseNCCheck, Result, TestCtx
-from cc_plugin_glider.expected_format import expected_format
 from six.moves.urllib.parse import urljoin
-import six
 import numpy as np
 import requests
+import six
 import warnings
-from operator import eq
-from cf_units import Unit
-
 try:
     basestring
 except NameError:
     basestring = str
 
-
-def compare_dtype(dt1, dt2):
-    """
-    Helper function to compare two numpy dtypes to see if they are equivalent
-    aside from endianness.  Returns True if the two are equivalent, False
-    otherwise.
-    """
-    return eq(*(dt.kind + str(dt.itemsize) for dt in (dt1, dt2)))
 
 class GliderCheck(BaseNCCheck):
     register_checker = True
@@ -52,94 +40,36 @@ class GliderCheck(BaseNCCheck):
     }
 
     @classmethod
-    def beliefs(cls):
-        '''
-        Not applicable for gliders
-        '''
-        return {}
-
-    @classmethod
     def make_result(cls, level, score, out_of, name, messages):
         return Result(level, (score, out_of), name, messages)
 
     @classmethod
     def get_ncei_table(cls, url):
-        """returns the NCEI table as a set"""
-        resp = requests.get(url)
+        '''
+        returns the NCEI lookup table as a set
+
+        :param str url: the url to the NCEI table
+        '''
+        resp = requests.get(url, timeout=30)
         resp.raise_for_status()
         return {line for line in resp.iter_lines(decode_unicode=True)}
 
     def setup(self, dataset):
         self.dataset = dataset
 
-    def check_locations(self, dataset):
-        '''
-        Validates that lat and lon are indeed variables
-        '''
-        level = BaseCheck.HIGH
-        out_of = 1
-        score = 0
-        messages = []
-        test = ('lat' in dataset.variables and 'lon' in dataset.variables)
-        if test:
-            score += 1
-        else:
-            messages.append("lat and lon don't exist")
-        return self.make_result(level, score, out_of,
-                                'Verifies lat and lon are variables', messages)
+    '''
+    HIGH priority checks:
 
-    def check_location_dimensions(self, dataset):
-        '''
-        Validates that lat and lon are valid timeseries variables
-        '''
-        level = BaseCheck.HIGH
-        out_of = 26
-        score = 0
-        messages = []
-
-        test = 'lat' in dataset.variables
-        score += int(test)
-        if not test:
-            messages.append('lat is a required variable')
-            return self.make_result(level, score, out_of,
-                                    'Lat and Lon are Time Series', messages)
-
-        test = 'lon' in dataset.variables
-        score += int(test)
-        if not test:
-            messages.append('lon is a required variable')
-            return self.make_result(level, score, out_of,
-                                    'Lat and Lon are Time Series', messages)
-
-        required_coordinate_attributes = [
-            '_FillValue',
-            'ancillary_variables',
-            'comment',
-            'coordinate_reference_frame',
-            'long_name',
-            'observation_type',
-            'platform',
-            'reference',
-            'standard_name',
-            'units',
-            'valid_max',
-            'valid_min'
-        ]
-        for attribute in required_coordinate_attributes:
-            test = hasattr(dataset.variables['lat'], attribute)
-            score += int(test)
-            if not test:
-                messages.append('%s attribute is required for lat' % attribute)
-
-            test = hasattr(dataset.variables['lon'], attribute)
-            score += int(test)
-            if not test:
-                messages.append('%s attribute is required for lat' % attribute)
-
-        return self.make_result(level, score, out_of,
-                                'Lat and Lon are Time Series', messages)
-
-    def check_variables(self, dataset):
+    check_required_variables
+    check_dimensions
+    check_lat_lon_attributes
+    check_time_attributes
+    check_pressure_depth_attributes
+    check_ctd_variable_attributes
+    check_profile_variable_attributes_and_types
+    check_global_attributes
+    '''
+    def check_required_variables(self, dataset):
         '''
         Verifies the dataset has the required variables
         '''
@@ -165,69 +95,156 @@ class GliderCheck(BaseNCCheck):
             'platform',
             'instrument_ctd'
         ]
+
         level = BaseCheck.HIGH
         out_of = len(required_variables)
         score = 0
         messages = []
         for variable in required_variables:
-            check_stat, msgs = self.existing_varname(variable, [],
-                                                     True)
-            score += int(check_stat)
-            messages.extend(msgs)
-        return self.make_result(level, score, out_of, 'Required Variables',
-                                messages)
+            test = variable in dataset.variables
+            score += int(test)
+            if not test:
+                messages.append('Variable {} is missing'.format(variable))
+        return self.make_result(level, score, out_of, 'Required Variables', messages)
 
-    def check_qc_variables(self, dataset):
+    def check_dimensions(self, dataset):
         '''
-        Verifies the dataset has all the required QC variables
+        NetCDF files submitted by the individual glider operators contain 2
+        dimension variables:
+         - time
+         - traj
         '''
-        qc_variables = ["{}_qc".format(s) for s in [
+        level = BaseCheck.HIGH
+        score = 0
+        messages = []
+
+        required_dimensions = [
             'time',
-            'lat',
-            'lon',
-            'pressure',
-            'depth',
+            'traj_strlen'
+        ]
+        out_of = len(required_dimensions)
+
+        for dimension in required_dimensions:
+            test = dimension in dataset.dimensions
+            score += int(test)
+            if not test:
+                messages.append('%s is not a valid dimension' % dimension)
+        return self.make_result(level, score, out_of,
+                                'Required Dimensions', messages)
+
+    def check_lat_lon_attributes(self, dataset):
+        '''
+        Validates that lat and lon have correct attributes
+
+        TODO: Does this need to be its own check? Is it high priority?
+        '''
+        level = BaseCheck.HIGH
+        out_of = 0
+        score = 0
+        messages = []
+
+        check_vars = ['lat', 'lon']
+        for var in check_vars:
+            stat, num_checks, msgs = util._check_variable_attrs(dataset, var)
+            score += int(stat)
+            out_of += num_checks
+            messages.extend(msgs)
+
+        return self.make_result(level, score, out_of,
+                                'Lat and Lon attributes', messages)
+
+    def check_time_attributes(self, dataset):
+        '''
+        Verifies that the time coordinate variable is correct
+        '''
+
+        level = BaseCheck.HIGH
+        score, out_of, messages = util._check_variable_attrs(dataset, 'time')
+
+        return self.make_result(level, score, out_of,
+                                'Time Variable', messages)
+
+    def check_pressure_depth_attributes(self, dataset):
+        '''
+        Verifies that the pressure coordinate/data variable is correct
+        '''
+
+        level = BaseCheck.HIGH
+        out_of = 0
+        score = 0
+        messages = []
+
+        check_vars = ['pressure', 'depth']
+        for var in check_vars:
+            stat, num_checks, msgs = util._check_variable_attrs(dataset, var)
+            score += int(stat)
+            out_of += num_checks
+            messages.extend(msgs)
+
+        return self.make_result(level, score, out_of,
+                                'Depth/Pressure variable attributes', messages)
+
+    def check_ctd_variable_attributes(self, dataset):
+        '''
+        Verifies that the CTD Variables are the correct data type and contain
+        the correct metadata
+        '''
+        level = BaseCheck.HIGH
+        out_of = 0
+        score = 0
+        messages = []
+
+        check_vars = [
             'temperature',
             'conductivity',
-            'density',
+            'salinity',
+            'density'
+        ]
+        for var in check_vars:
+            stat, num_checks, msgs = util._check_variable_attrs(dataset, var)
+            score += int(stat)
+            out_of += num_checks
+            messages.extend(msgs)
+        return self.make_result(level, score, out_of, 'CTD Variables', messages)
+
+    def check_profile_variable_attributes_and_types(self, dataset):
+        '''
+        Verifies that the profile variables are the of the correct data type
+        and contain the correct metadata
+        '''
+
+        level = BaseCheck.HIGH
+        out_of = 0
+        score = 0
+        messages = []
+
+        check_vars = [
+            'profile_id',
             'profile_time',
             'profile_lat',
             'profile_lon',
-            'time_uv',
             'lat_uv',
             'lon_uv',
             'u',
             'v'
-        ]]
-
-        level = BaseCheck.HIGH
-        score = 0
-        out_of = 0
-
-        required_attributes = [
-            'flag_meanings',
-            'flag_values',
-            'long_name',
-            'standard_name',
-            'valid_max',
-            'valid_min'
         ]
-        messages = []
-        for qc_var in qc_variables:
-            if qc_var in self.dataset.variables:
-                pass_stat, msgs = self.existing_varname(qc_var,
-                                                        required_attributes,
-                                                        False)
-                out_of += 1
-                score += int(pass_stat)
-                messages.extend(msgs)
-        return self.make_result(level, score, out_of, 'QC Variables', messages)
+        for var in check_vars:
+            stat, num_checks, msgs = util._check_variable_attrs(dataset, var)
+            score += int(stat)
+            out_of += num_checks
+            messages.extend(msgs)
+
+        return self.make_result(level, score, out_of,
+                                'Profile Variables', messages)
 
     def check_global_attributes(self, dataset):
         '''
         Verifies the base metadata in the global attributes
+
+        TODO: update this check to use @check_has on next cc release
         '''
-        attribute_fields = [
+        level = BaseCheck.HIGH
+        global_attributes = [
             'Conventions',
             'Metadata_Conventions',
             'comment',
@@ -259,20 +276,22 @@ class GliderCheck(BaseNCCheck):
             'source',
             'standard_name_vocabulary',
             'summary',
-            'title'
+            'title',
+            'wmo_id'
         ]
-        level = BaseCheck.MEDIUM
+
         out_of = 0
         score = 0
         messages = []
-        for field in attribute_fields:
-            v = getattr(dataset, field, '')
-            test = v != ''
+        for field in global_attributes:
+            # v = getattr(dataset, field, '')
+            test = field in dataset.ncattrs()
             score += int(test)
             out_of += 1
             if not test:
-                messages.append('%s global attribute is missing' % field)
-
+                messages.append('Attr %s not present' % field)
+                continue
+            v = getattr(dataset, field, '')
             if isinstance(v, basestring):
                 test = len(v.strip()) > 0
             else:
@@ -280,8 +299,11 @@ class GliderCheck(BaseNCCheck):
             score += int(test)
             out_of += 1
             if not test:
-                messages.append('%s global attribute can not be empty' % field)
+                messages.append('Attr %s is empty or completely whitespace' % field)
 
+        '''
+        Verify that sea_name attribute exists and is valid
+        '''
         sea_names = [sn.lower() for sn in util.get_sea_names()]
         sea_name = getattr(dataset, 'sea_name', '').replace(', ', ',')
         if sea_name:
@@ -298,9 +320,11 @@ class GliderCheck(BaseNCCheck):
                                      ' {} is not a valid sea name').format(sea))
         else:
             out_of += 1
-            messages.append('sea_name global attribute is missing')
+            messages.append('Attr sea_name not present')
 
-        # Check the platform type
+        '''
+        Verify that platform_type attribute exists and is valid
+        '''
         platform_type = getattr(dataset, 'platform_type', '')
         if platform_type:
             # Score a point for the fact that the attribute exists
@@ -315,56 +339,42 @@ class GliderCheck(BaseNCCheck):
                                  ).format(platform_type, ",".join(self.acceptable_platform_types)))
         else:
             out_of += 1
-            messages.append('platform_type global attribute is missing')
+            messages.append('Attr platform_type not present')
 
         return self.make_result(level, score, out_of,
-                                'Recommended Global Attributes', messages)
+                                'Required Global Attributes', messages)
 
-    def check_wmo(self, dataset):
+    '''
+    MEDIUM priority checks:
+
+    check_qc_variables
+    check_primary_variable_attributes
+    check_monotonically_increasing_time
+    check_dim_nodata
+    check_depth_array
+    check_trajectory_variables
+    check_standard_names
+    check_container_variables
+    check_qartod
+    check_valid_min_dtype
+    check_valid_max_dtype
+    '''
+    def check_qc_variables(self, dataset):
         '''
-        Verifies that the data has a WMO ID but not necessarily filled out
+        Verifies the dataset has all the required QC variables
         '''
         level = BaseCheck.MEDIUM
         score = 0
-        out_of = 1
-        messages = []
-        test = hasattr(dataset, 'wmo_id')
-        score += int(test)
-        if not test:
-            msg = ("WMO ID is a required attribute but can be empty if the"
-                   "dataset doesn't have a WMO ID")
-            messages.append(msg)
-
-        return self.make_result(level, score, out_of, 'WMO ID', messages)
-
-    def check_summary(self, dataset):
-        level = BaseCheck.MEDIUM
-        out_of = 1
-        score = 0
-        messages = []
-        if hasattr(dataset, 'summary') and dataset.summary:
-            score += 1
-        else:
-            messages.append('Dataset must define summary')
-        return self.make_result(level, score, out_of,
-                                'Summary defined', messages)
-
-    def check_primary_variable_attributes(self, dataset):
-        '''
-        Verifies that each primary variable has the necessary metadata
-        '''
-        level = BaseCheck.MEDIUM
         out_of = 0
-        score = 0
-        messages = []
-        primary_variables = [
+
+        qc_variables = ["{}_qc".format(s) for s in [
+            'time',
             'lat',
             'lon',
             'pressure',
             'depth',
             'temperature',
             'conductivity',
-            'salinity',
             'density',
             'profile_time',
             'profile_lat',
@@ -374,149 +384,58 @@ class GliderCheck(BaseNCCheck):
             'lon_uv',
             'u',
             'v'
-        ]
-        out_of = len(primary_variables)
-        required_attributes = [
-            '_FillValue',
-            'units',
-            'standard_name',
-            'observation_type'
-        ]
-        for var in primary_variables:
-            check_stat, msgs = self.existing_varname(var,
-                                                required_attributes, True)
-            #out_of += 1
-            score += int(check_stat)
+        ]]
+        # The None means just check the attribute exists, not a value
+        required_attributes = {
+            'flag_meanings': None,
+            'flag_values': None,
+            'long_name': None,
+            'standard_name': None,
+            'valid_max': None,
+            'valid_min': None
+        }
+        messages = []
+        for qc_var in qc_variables:
+            pass_stat, num_checks, msgs = util._check_variable_attrs(dataset, qc_var,
+                                                                     required_attributes)
+            out_of += num_checks
+            score += int(pass_stat)
             messages.extend(msgs)
+        return self.make_result(level, score, out_of, 'QC Variables', messages)
 
-        return self.make_result(level, score, out_of,
-                                'Recommended Variable Attributes', messages)
-
-    def check_dimensions(self, dataset):
+    def check_monotonically_increasing_time(self, ds):
         '''
-        NetCDF files submitted by the individual glider operators contain 2
-        dimension variables:
-         - time
-         - traj
+        Check if all times are monotonically increasing
         '''
-        level = BaseCheck.HIGH
-        score = 0
-        messages = []
-
-        required_dimensions = [
-            'time',
-            'traj_strlen'
-        ]
-        out_of = len(required_dimensions)
-
-        for dimension in dataset.dimensions:
-            test = dimension in required_dimensions
-            score += int(test)
-            if not test:
-                messages.append('%s is not a valid dimension' % dimension)
-        return self.make_result(level, score, out_of,
-                                'Required Dimensions', messages)
-
-
-    def existing_varname(self, var_name, check_attrs,
-                         check_var_exist=False, expected_dtype=None):
-        """
-        Convenience method to check that variable exists within datasets and
-        has specified attributes.  Optionally can check for a certain variable
-        dtype. `var_name` If check_var_exist is True, checks for the existence
-        of the variable first.  If `expected_dtype` is supplied as a numpy
-        dtype, checks that the dtype for the variable is equivalent to
-        `expected_dtype`
-        """
-        is_passing = True
-        messages = []
-        if check_var_exist and var_name not in self.dataset.variables:
-            messages.append("Required Variable {} is missing".format(var_name))
-            is_passing = False
-            return (is_passing, messages)
-        else:
-            var = self.dataset.variables[var_name]
-
-        if expected_dtype is not None:
-            if not compare_dtype(var.dtype, expected_dtype):
-                messages.append("Variable {} is expected to have a dtype of "
-                                "{}, has a dtype of {} instead"
-                                "".format(var_name, var.dtype,
-                                           expected_dtype))
-                is_passing = False
-
-
-        sub_dict = expected_format.get(var_name, {})
-        var_attrs = set(var.ncattrs())
-
-        for attr in check_attrs:
-            if attr not in var_attrs:
-                messages.append("variable {} must have a {} attribute"
-                                "".format(var_name, attr))
-                is_passing = False
-                continue
-
-            if attr == 'standard_name' and 'standard_name' in sub_dict:
-                var_std_name = var.standard_name
-                if var_std_name != sub_dict['standard_name']:
-                    messages.append("Variable {} must have a standard_name of {}".format(var_name,
-                                                                                            sub_dict['standard_name']))
-                    is_passing = False
-            elif attr == 'units':
-                raw_units = var.units
-                if 'units' in sub_dict:
-                    cur_unit = Unit(raw_units)
-                    comp_unit = Unit(sub_dict['units'])
-                    if not cur_unit.is_convertible(comp_unit):
-                        messages.append("Variable {} units attribute must be "
-                                        "convertible to {}".format(var_name,
-                                                                    comp_unit))
-                        is_passing = False
-            elif attr == '_FillValue':
-                if not compare_dtype(var.dtype, var._FillValue.dtype):
-                    messages.append("Variable {} _FillValue dtype does not "
-                                    "match variable dtype"
-                                    "".format(var_name, var._FillValue.dtype,
-                                              var.dtype))
-                    is_passing = False
-
-
-        return (is_passing, messages)
-
-
-    def check_if_monotonically_increasing(self, ds):
-       """Check if all times are monotonically increasing"""
-       # shouldn't this already be handled by CF trajectory featureType?
-       test_ctx = TestCtx(BaseCheck.MEDIUM, 'Monotonically increasing time')
-       test_ctx.assert_true(np.all(np.diff(ds.variables['time']) > 0),
-                            'Time is not monotonically increasing')
-       return test_ctx.to_result()
+        # shouldn't this already be handled by CF trajectory featureType?
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Profile data is valid')
+        test_ctx.assert_true(np.all(np.diff(ds.variables['time']) > 0), 'Time variable is not monotonically increasing')
+        return test_ctx.to_result()
 
     def check_dim_nodata(self, dataset):
-        """
+        '''
         Gets the transposed cartesian product of the depth and time
         variables.
-        """
-
-        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Non NaN count >= 2')
+        '''
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Profile data is valid')
 
         # check that cartesian product of non-nodata/_FillValue values >= 2
         # count here checks the count of non-masked data
         non_nodata_status = (dataset.variables['time'][:].count() *
                              dataset.variables['depth'][:].count()) >= 2
-        test_ctx.assert_true(non_nodata_status, "Cartesian product of depth "
-                             "and time coordinate variables must have at least "
-                             "two instances of time and depth which are both "
-                             "not NaN/FillValue")
+        test_ctx.assert_true(non_nodata_status, "Time and depth "
+                             "variables must have at least "
+                             "two valid data points together")
         return test_ctx.to_result()
 
-    # check abs sum of diff > 0
-    def check_sum_depth(self, dataset):
-        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Abs value of sum of first-order difference non-neglible')
+    def check_depth_array(self, dataset):
+        '''
+        check abs sum of diff > 0
+        '''
+        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Profile data is valid')
         np.abs(np.diff(dataset.variables['depth']).sum())
         test_ctx.assert_true(np.abs(np.diff(dataset.variables['depth']).sum()) > 1e-4,
-                             "Sum of first order difference in depth values "
-                             "must be non-negligible (> 1e-4 m)"
+                             "Depth array must be valid, ie  abs(Z0 - Zend) > 0"
                              )
         return test_ctx.to_result()
 
@@ -531,356 +450,34 @@ class GliderCheck(BaseNCCheck):
         the same value.
         '''
         level = BaseCheck.MEDIUM
-        out_of = 2
+        out_of = 0
         score = 0
         messages = []
 
-        test = 'trajectory' in dataset.variables
-        score += int(test)
-        if not test:
-            messages.append('trajectory variable not found')
-            return self.make_result(level, score, out_of,
-                                    'Trajectory Variable', messages)
+        if 'trajectory' not in dataset.variables:
+            return
+
         test = dataset.variables['trajectory'].dimensions == ('traj_strlen',)
         score += int(test)
+        out_of += 1
         if not test:
             messages.append('trajectory has an invalid dimension')
 
-        pass_stat, attr_msgs = self.existing_varname('trajectory',
-                                                     ('cf_role', 'comment',
-                                                      'long_name'))
+        pass_stat, num_checks, attr_msgs = util._check_variable_attrs(dataset, 'trajectory')
         score += int(pass_stat)
+        out_of += num_checks
         messages.extend(attr_msgs)
         return self.make_result(level, score, out_of,
                                 'Trajectory Variable', messages)
 
-    def check_time_series_variables(self, dataset):
-        '''
-        Verifies that the time coordinate variable is correct
-        '''
+    # def check_standard_names(self, dataset):
+    #     '''
+    #     Verifies that the standard names are correct.
 
-        level = BaseCheck.HIGH
-        out_of = 7
-        score = 0
-        messages = []
-
-        test = 'time' in dataset.variables
-        score += int(test)
-        if not test:
-            messages.append('Required coordinate variable time is missing')
-            return self.make_result(level, score, out_of,
-                                    'Time Series Variable', messages)
-
-        test = compare_dtype(dataset.variables['time'].dtype, np.dtype('f8'))
-        score += int(test)
-        if not test:
-            msg = 'Invalid variable type for time, it should be float64'
-            messages.append(msg)
-
-        if hasattr(dataset.variables['time'], 'ancillary_variables'):
-            out_of += 1
-            acv = dataset.variables['time'].ancillary_variables
-            test = acv in dataset.variables
-            score += int(test)
-            if not test:
-                msg = ('Invalid ancillary_variables attribute for time, '
-                       '{} is not a variable'.format(acv))
-                messages.append(msg)
-
-        test = dataset.variables['time'].calendar == 'gregorian'
-        score += int(test)
-        if not test:
-            messages.append('Invalid calendar for time, should be "gregorian"')
-
-        test = dataset.variables['time'].long_name == 'Time'
-        score += int(test)
-        if not test:
-            messages.append('Invalid long_name for time, should be "Time"')
-
-        test = dataset.variables['time'].observation_type == 'measured'
-        score += int(test)
-        if not test:
-            msg = 'Invalid observation_type for time, should be "measured"'
-            messages.append(msg)
-
-        test = dataset.variables['time'].standard_name == 'time'
-        score += int(test)
-        if not test:
-            messages.append('Invalid standard name for time, should be "time"')
-
-        test = hasattr(dataset.variables['time'], 'units')
-        score += int(test)
-        if not test:
-            messages.append('No units defined for time')
-
-        return self.make_result(level, score, out_of,
-                                'Time Series Variable', messages)
-
-    def check_depth_coordinates(self, dataset):
-        '''
-        Verifies that the pressure coordinate/data variable is correct
-        '''
-
-        level = BaseCheck.HIGH
-        out_of = 34
-        score = 0
-        messages = []
-
-        coordinates = ['pressure', 'depth']
-
-        for coordinate in coordinates:
-            test = coordinate in dataset.variables
-            score += int(test)
-
-            if not test:
-                messages.append('Required coordinate variable %s is missing' %
-                                coordinate)
-                return self.make_result(level, score, out_of,
-                                        'Depth/Pressure Variables', messages)
-
-        required_values = {
-        }
-
-        data_vars = {i: dataset.variables[i] for i in coordinates}
-        for key, value in required_values.items():
-            for data_var in data_vars:
-                if not hasattr(data_vars[data_var], key):
-                    messages.append('%s variable requires attribute %s with a value of %s' % (data_var, key, value))  # noqa
-                    continue
-                if not test:
-                    messages.append('%s.%s != %s' % (data_var, key, value))
-                    continue
-                score += 1
-
-        required_attributes = [
-            '_FillValue',
-            'ancillary_variables',
-            'accuracy',
-            'ancillary_variables',
-            'comment',
-            'instrument',
-            'long_name',
-            'platform',
-            'positive',
-            'precision',
-            'reference_datum',
-            'resolution',
-            'standard_name',
-            'units',
-            'valid_max',
-            'valid_min'
-        ]
-
-        for field in required_attributes:
-            for data_var in data_vars:
-                stat, msgs = self.existing_varname(data_var,
-                                                   required_attributes)
-                score += int(stat)
-                messages.extend(msgs)
-
-        return self.make_result(level, score, out_of,
-                                'Depth/Pressure Variables', messages)
-
-    def check_ctd_variables(self, dataset):
-        '''
-        Verifies that the CTD Variables are the correct data type and contain
-        the correct metadata
-        '''
-
-        level = BaseCheck.HIGH
-        out_of = 4
-        score = 0
-        messages = []
-
-        variables = [
-            'temperature',
-            'conductivity',
-            'salinity',
-            'density'
-        ]
-
-        required_fields = [
-            'accuracy',
-            'ancillary_variables',
-            'instrument',
-            'long_name',
-            'observation_type',
-            'platform',
-            'precision',
-            'resolution',
-            'standard_name',
-            'units',
-            'valid_max',
-            'valid_min'
-        ]
-
-        expected_dtype = np.dtype('f8')
-        for var in variables:
-            check_stat, msgs = self.existing_varname(var, required_fields,
-                                                     True, expected_dtype)
-            score += int(check_stat)
-            messages.extend(msgs)
-        return self.make_result(level, score, out_of, 'CTD Variables',
-                                messages)
-
-    def check_standard_names(self, dataset):
-        '''
-        Verifies that the standard names are correct.
-        '''
-        level = BaseCheck.MEDIUM
-        out_of = 1
-        score = 0
-        messages = []
-        # only check salinity?
-        std_names = {
-            'salinity': 'sea_water_practical_salinity'
-        }
-
-        for var in std_names:
-            if var not in dataset.variables:
-                messages.append("Can't verify standard name for %s: %s is missing." % (var, var))  # noqa
-                continue
-            nc_var = dataset.variables[var]
-            test = getattr(nc_var, 'standard_name', None) == std_names[var]
-            score += int(test)
-            if not test:
-                messages.append("Invalid standard name for %s: %s" %
-                                (var, getattr(nc_var, 'standard_name', '')))
-
-        return self.make_result(level, score, out_of,
-                                'Standard Names', messages)
-
-    def check_profile_vars(self, dataset):
-        '''
-        Verifies that the profile variables are the of the correct data type
-        and contain the correct metadata
-        '''
-
-        level = BaseCheck.MEDIUM
-        out_of = 74
-        score = 0
-        messages = []
-
-        data_struct = {
-            'profile_id': {
-                'dtype': '<i4',
-                'fields': [
-                    '_FillValue',
-                    'comment',
-                    'long_name',
-                    'valid_min',
-                    'valid_max'
-                ]
-            },
-            'profile_time': {
-                'dtype': '<f8',
-                'fields': [
-                    '_FillValue',
-                    'comment',
-                    'long_name',
-                    'observation_type',
-                    'platform',
-                    'standard_name',
-                    'units'
-                ]
-            },
-            'profile_lat': {
-                'dtype': '<f8',
-                'fields': [
-                    '_FillValue',
-                    'comment',
-                    'long_name',
-                    'observation_type',
-                    'platform',
-                    'standard_name',
-                    'units',
-                    'valid_min',
-                    'valid_max'
-                ]
-            },
-            'profile_lon': {
-                'dtype': '<f8',
-                'fields': [
-                    '_FillValue',
-                    'comment',
-                    'long_name',
-                    'observation_type',
-                    'platform',
-                    'standard_name',
-                    'units',
-                    'valid_min',
-                    'valid_max'
-                ]
-            },
-            'lat_uv': {
-                'dtype': '<f8',
-                'fields': [
-                    '_FillValue',
-                    'comment',
-                    'long_name',
-                    'observation_type',
-                    'platform',
-                    'standard_name',
-                    'units',
-                    'valid_min',
-                    'valid_max'
-                ]
-            },
-            'lon_uv': {
-                'dtype': '<f8',
-                'fields': [
-                    '_FillValue',
-                    'comment',
-                    'long_name',
-                    'observation_type',
-                    'platform',
-                    'standard_name',
-                    'units',
-                    'valid_min',
-                    'valid_max'
-                ]
-            },
-            'u': {
-                'dtype': '<f8',
-                'fields': [
-                    '_FillValue',
-                    'comment',
-                    'long_name',
-                    'observation_type',
-                    'platform',
-                    'standard_name',
-                    'units',
-                    'valid_min',
-                    'valid_max'
-                ]
-            },
-            'v': {
-                'dtype': '<f8',
-                'fields': [
-                    '_FillValue',
-                    'comment',
-                    'long_name',
-                    'observation_type',
-                    'platform',
-                    'standard_name',
-                    'units',
-                    'valid_min',
-                    'valid_max'
-                ]
-            }
-        }
-
-        for profile_var in data_struct:
-            expected_dtype = np.dtype(data_struct[profile_var]['dtype'])
-            var_fields = data_struct[profile_var]['fields']
-            check_stat, msgs = self.existing_varname(profile_var,
-                                                     var_fields, True,
-                                                     expected_dtype)
-            score += int(check_stat)
-            messages.extend(msgs)
-
-        return self.make_result(level, score, out_of,
-                                'Profile Variables', messages)
+    #     TODO: we already check when we need an exact match. This check should
+    #     check the validity of all variables standard names
+    #     '''
+    #     pass
 
     def check_container_variables(self, dataset):
         '''
@@ -889,47 +486,18 @@ class GliderCheck(BaseNCCheck):
         '''
 
         level = BaseCheck.MEDIUM
-        out_of = 19
+        out_of = 0
         score = 0
         messages = []
 
-        data_struct = {
-            'platform': {
-                'dtype': '<i4',
-                'fields': [
-                    '_FillValue',
-                    'comment',
-                    'id',
-                    'instrument',
-                    'long_name',
-                    'type',
-                    'wmo_id'
-                ]
-            },
-            'instrument_ctd': {
-                'dtype': '<i4',
-                'fields': [
-                    '_FillValue',
-                    'calibration_date',
-                    'calibration_report',
-                    'comment',
-                    'factory_calibrated',
-                    'long_name',
-                    'make_model',
-                    'platform',
-                    'serial_number',
-                    'type'
-                ]
-            }
-        }
-
-        for container_var in data_struct:
-            expected_dtype = np.dtype(data_struct[container_var]['dtype'])
-            var_fields = data_struct[container_var]['fields']
-            check_stat, msgs = self.existing_varname(container_var,
-                                                     var_fields, True,
-                                                     expected_dtype)
-            score += int(check_stat)
+        check_vars = [
+            'platform',
+            'instrument_ctd',
+        ]
+        for var in check_vars:
+            stat, num_checks, msgs = util._check_variable_attrs(dataset, var)
+            score += int(stat)
+            out_of += num_checks
             messages.extend(msgs)
 
         return self.make_result(level, score, out_of,
@@ -965,53 +533,30 @@ class GliderCheck(BaseNCCheck):
                                      'variable {} must have a _FillValue of 9b'.format(qartod_var))
 
                 test_ctx.assert_true(getattr(ncvar, 'long_name', ''),
-                                     'attribute {}:long_name must be a non-empty string'
-                                     ''.format(qartod_var))
+                                     'attribute {}:long_name must be a non-empty string'.format(qartod_var))
 
                 test_ctx.assert_true(getattr(ncvar, 'flag_meanings', ''),
-                                     'attribute {}:flag_meanings must be a non-empty string'
-                                     ''.format(qartod_var))
+                                     'attribute {}:flag_meanings must be a non-empty string'.format(qartod_var))
 
                 test_ctx.assert_true(isinstance(flag_values, np.ndarray),
-                                     'attribute {}:flag_values must be defined as an array of bytes'
-                                     ''.format(qartod_var))
+                                     'attribute {}:flag_values must be defined as an array of bytes'.format(qartod_var))
 
                 if isinstance(flag_values, np.ndarray):
                     dtype = flag_values.dtype.str
-                    test_ctx.assert_true(compare_dtype(dtype, np.dtype('|i1')),
+                    test_ctx.assert_true(util.compare_dtype(dtype, np.dtype('|i1')),
                                          'attribute {}:flag_values has an illegal data-type, must '
                                          'be byte'.format(qartod_var))
 
                 valid_min_dtype = getattr(valid_min, 'dtype', None)
-                test_ctx.assert_true(compare_dtype(getattr(valid_min_dtype,
-                                                           'str', None),
-                                                   np.dtype('|i1')),
-                                     'attribute {}:valid_min must be of type byte'
-                                     ''.format(qartod_var))
+                test_ctx.assert_true(util.compare_dtype(getattr(valid_min_dtype, 'str', None), np.dtype('|i1')),
+                                     'attribute {}:valid_min must be of type byte'.format(qartod_var))
 
                 valid_max_dtype = getattr(valid_max, 'dtype', None)
-                test_ctx.assert_true(compare_dtype(getattr(valid_max_dtype,
-                                                           'str', None),
-                                                   np.dtype('|i1')),
-                                     'attribute {}:valid_max must be of type byte'
-                                     ''.format(qartod_var))
+                test_ctx.assert_true(util.compare_dtype(getattr(valid_max_dtype, 'str', None), np.dtype('|i1')),
+                                     'attribute {}:valid_max must be of type byte'.format(qartod_var))
 
         if test_ctx.out_of == 0:
             return None
-
-        return test_ctx.to_result()
-
-    def check_ioos_ra(self, dataset):
-        '''
-        Check if the ioos_regional_association attribute exists, if it does check that it's not
-        empty
-        '''
-        test_ctx = TestCtx(BaseCheck.LOW, 'IOOS Regional Association Attribute')
-
-        ioos_ra = getattr(dataset, 'ioos_regional_association', None)
-
-        test_ctx.assert_true(ioos_ra,
-                             'ioos_regional_association global attribute should be defined')
 
         return test_ctx.to_result()
 
@@ -1035,8 +580,7 @@ class GliderCheck(BaseNCCheck):
                 valid_min_dtype = str(getattr(valid_min, 'dtype', None))
 
             if valid_min is not None:
-                test_ctx.assert_true(compare_dtype(np.dtype(valid_min_dtype),
-                                                   ncvar.dtype),
+                test_ctx.assert_true(util.compare_dtype(np.dtype(valid_min_dtype), ncvar.dtype),
                                      '{}:valid_min has a different data type, {}, than variable {} '
                                      '{}'.format(var_name, valid_min_dtype, str(ncvar.dtype),
                                                  var_name))
@@ -1063,16 +607,39 @@ class GliderCheck(BaseNCCheck):
                 valid_max_dtype = str(getattr(valid_max, 'dtype', None))
 
             if valid_max is not None:
-                test_ctx.assert_true(compare_dtype(np.dtype(valid_max_dtype),
-                                                   ncvar.dtype),
+                test_ctx.assert_true(util.compare_dtype(np.dtype(valid_max_dtype), ncvar.dtype),
                                      '{}:valid_max has a different data type, {}, than variable {} '
                                      '{}'.format(var_name, valid_max_dtype, str(ncvar.dtype),
                                                  var_name))
 
         return test_ctx.to_result()
 
+    '''
+    LOW priority checks:
+
+    check_ioos_ra
+    check_valid_lon
+    check_ncei_tables
+    '''
+    def check_ioos_ra(self, dataset):
+        '''
+        Check if the ioos_regional_association attribute exists, if it does check that it's not
+        empty
+        '''
+        test_ctx = TestCtx(BaseCheck.LOW, 'IOOS Regional Association Attribute')
+
+        ioos_ra = getattr(dataset, 'ioos_regional_association', None)
+
+        test_ctx.assert_true(ioos_ra,
+                             'ioos_regional_association global attribute should be defined')
+
+        return test_ctx.to_result()
+
     def check_valid_lon(self, dataset):
-        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Longitude valid_min valid_max not [-90, 90]')
+        '''
+        Check the valid_min and valid max for longitude variable
+        '''
+        test_ctx = TestCtx(BaseCheck.LOW, 'Longitude valid_min valid_max not [-90, 90]')
 
         if 'lon' not in dataset.variables:
             return
@@ -1081,15 +648,14 @@ class GliderCheck(BaseNCCheck):
         valid_min = getattr(longitude, 'valid_min')
         valid_max = getattr(longitude, 'valid_max')
         test_ctx.assert_true(not(valid_min == -90 and valid_max == 90),
-                             "Longitude's valid_min and valid_max are [-90, 90], it's likely this "
-                             "was a mistake")
+                             "Longitude's valid_min and valid_max are [-90, 90], it's likely this was a mistake")
         return test_ctx.to_result()
 
     def check_ncei_tables(self, dataset):
-        """
+        '''
         Checks the project, platform id, instrument make_model, and institution
         against lists of values provided by NCEI
-        """
+        '''
         test_ctx = TestCtx(BaseCheck.LOW, "File has NCEI approved project, "
                                           "institution, platform_type, and "
                                           "instrument")
@@ -1109,8 +675,7 @@ class GliderCheck(BaseNCCheck):
             if global_att_name not in {'instrument', 'platform'}:
                 global_att_present = hasattr(dataset, global_att_name)
                 test_ctx.assert_true(global_att_present,
-                                    "Attribute {} not in dataset".format(
-                                        global_att_name))
+                                     "Attribute {} not in dataset".format(global_att_name))
                 if not global_att_present:
                     continue
 
@@ -1140,36 +705,33 @@ class GliderCheck(BaseNCCheck):
 
                 for var_name in var_name_set:
                     if var_name not in dataset.variables:
-                        test_ctx.assert_true(False,
-                                            "Referenced {} variable "
-                                            "{} does not exist".format(
-                                                global_att_name, var_name))
+                        msg = "Referenced {} variable {} does not exist".format(global_att_name,
+                                                                                var_name)
+                        test_ctx.assert_true(False, msg)
                         continue
 
                     var = dataset.variables[var_name]
                     # have to use .ncattrs, hangs if using `in var` ?
-                    var_attr_exists = (var_remap[global_att_name] in
-                                       var.ncattrs())
-                    test_ctx.assert_true(var_attr_exists,
-                                        "Attribute {} should exist in variable "
-                                        "{}".format(var_remap[global_att_name],
-                                                    var_name))
+                    var_attr_exists = (var_remap[global_att_name] in var.ncattrs())
+                    msg = "Attribute {} should exist in variable {}".format(var_remap[global_att_name],
+                                                                            var_name)
+                    test_ctx.assert_true(var_attr_exists, msg)
+
                     if not var_attr_exists:
                         continue
                     search_attr = getattr(var, var_remap[global_att_name])
-                    test_ctx.assert_true(search_attr in check_set,
-                                        "Attribute {} '{}' for "
-                                        "variable {} not contained "
-                                        "in {}".format(var_remap[global_att_name],
-                                                        search_attr, var_name,
-                                                        table_loc))
+
+                    msg = "Attribute {} '{}' for variable {} not contained in {}".format(var_remap[global_att_name],
+                                                                                         search_attr, var_name,
+                                                                                         table_loc)
+                    test_ctx.assert_true(search_attr in check_set, msg)
 
             else:
                 # check for global attribute existence already handled above
                 global_att_value = getattr(dataset, global_att_name)
-                test_ctx.assert_true(global_att_value in check_set,
-                                    "Global attribute {} value '{}' not "
-                                    "contained in {}".format(global_att_name,
-                                                              global_att_value,
-                                                              table_loc))
+                msg = "Global attribute {} value '{}' not contained in {}".format(global_att_name,
+                                                                                  global_att_value,
+                                                                                  table_loc)
+                test_ctx.assert_true(global_att_value in check_set, msg)
+
         return test_ctx.to_result()
