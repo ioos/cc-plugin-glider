@@ -11,6 +11,7 @@ from __future__ import (absolute_import, division, print_function)
 from cc_plugin_glider import util
 from compliance_checker import __version__
 from compliance_checker.base import BaseCheck, BaseNCCheck, Result, TestCtx
+from compliance_checker.cf.cf import CFBaseCheck
 from six.moves.urllib.parse import urljoin
 import numpy as np
 import requests
@@ -38,6 +39,8 @@ class GliderCheck(BaseNCCheck):
         'Spray Glider',
         'Slocum Glider'
     }
+
+    cf_checks = CFBaseCheck()
 
     @classmethod
     def make_result(cls, level, score, out_of, name, messages):
@@ -68,6 +71,10 @@ class GliderCheck(BaseNCCheck):
     check_ctd_variable_attributes
     check_profile_variable_attributes_and_types
     check_global_attributes
+    check_standard_names
+    check_monotonically_increasing_time
+    check_dim_no_data
+    check_depth_array
     '''
     def check_required_variables(self, dataset):
         '''
@@ -344,16 +351,67 @@ class GliderCheck(BaseNCCheck):
         return self.make_result(level, score, out_of,
                                 'Required Global Attributes', messages)
 
+    def check_standard_names(self, dataset):
+        '''
+        Check a variables's standard_name attribute to ensure that it meets CF
+        compliance.
+
+        CF §3.3 A standard name is associated with a variable via the attribute
+        standard_name which takes a string value comprised of a standard name
+        optionally followed by one or more blanks and a standard name modifier
+
+        :param netCDF4.Dataset dataset: An open netCDF dataset
+        :return: List of results
+        '''
+        results = self.cf_checks.check_standard_name(dataset)
+        for dd in results:
+            # Update the check name
+            dd.name = 'Standard Names'
+        return results
+
+    def check_monotonically_increasing_time(self, ds):
+        '''
+        Check if all times are monotonically increasing
+        '''
+        # shouldn't this already be handled by CF trajectory featureType?
+        test_ctx = TestCtx(BaseCheck.HIGH, 'Profile data is valid')
+        test_ctx.assert_true(np.all(np.diff(ds.variables['time']) > 0), 'Time variable is not monotonically increasing')
+        return test_ctx.to_result()
+
+    def check_dim_no_data(self, dataset):
+        '''
+        Checks that cartesian product of the depth and time
+        variables have more than 2 valid values.
+        '''
+        test_ctx = TestCtx(BaseCheck.HIGH, 'Profile data is valid')
+
+        # check that cartesian product of non-nodata/_FillValue values >= 2
+        # count here checks the count of non-masked data
+        if 'time' in dataset.variables and 'depth' in dataset.variables:
+            test = (dataset.variables['time'][:].count() *
+                    dataset.variables['depth'][:].count()) >= 2
+            test_ctx.assert_true(test, "Time and depth "
+                                 "variables must have at least "
+                                 "two valid data points together")
+        return test_ctx.to_result()
+
+    def check_depth_array(self, dataset):
+        '''
+        Checks that the profile data is valid (abs sum of diff > 0 for depth data)
+        '''
+        test_ctx = TestCtx(BaseCheck.HIGH, 'Profile data is valid')
+        if 'depth' in dataset.variables:
+            test_ctx.assert_true(np.abs(np.diff(dataset.variables['depth']).sum()) > 1e-4,
+                                 "Depth array must be valid, ie  abs(Z0 - Zend) > 0"
+                                 )
+        return test_ctx.to_result()
+
     '''
     MEDIUM priority checks:
 
     check_qc_variables
     check_primary_variable_attributes
-    check_monotonically_increasing_time
-    check_dim_no_data
-    check_depth_array
     check_trajectory_variables
-    check_standard_names
     check_container_variables
     check_qartod
     check_ancillary_variables
@@ -405,43 +463,6 @@ class GliderCheck(BaseNCCheck):
             messages.extend(msgs)
         return self.make_result(level, score, out_of, 'QC Variables', messages)
 
-    def check_monotonically_increasing_time(self, ds):
-        '''
-        Check if all times are monotonically increasing
-        '''
-        # shouldn't this already be handled by CF trajectory featureType?
-        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Profile data is valid')
-        test_ctx.assert_true(np.all(np.diff(ds.variables['time']) > 0), 'Time variable is not monotonically increasing')
-        return test_ctx.to_result()
-
-    def check_dim_no_data(self, dataset):
-        '''
-        Checks that cartesian product of the depth and time
-        variables have more than 2 valid values.
-        '''
-        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Profile data is valid')
-
-        # check that cartesian product of non-nodata/_FillValue values >= 2
-        # count here checks the count of non-masked data
-        if 'time' in dataset.variables and 'depth' in dataset.variables:
-            test = (dataset.variables['time'][:].count() *
-                    dataset.variables['depth'][:].count()) >= 2
-            test_ctx.assert_true(test, "Time and depth "
-                                 "variables must have at least "
-                                 "two valid data points together")
-        return test_ctx.to_result()
-
-    def check_depth_array(self, dataset):
-        '''
-        Checks that the profile data is valid (abs sum of diff > 0 for depth data)
-        '''
-        test_ctx = TestCtx(BaseCheck.MEDIUM, 'Profile data is valid')
-        if 'depth' in dataset.variables:
-            test_ctx.assert_true(np.abs(np.diff(dataset.variables['depth']).sum()) > 1e-4,
-                                 "Depth array must be valid, ie  abs(Z0 - Zend) > 0"
-                                 )
-        return test_ctx.to_result()
-
     def check_trajectory_variables(self, dataset):
         '''
         The trajectory variable stores a character array that identifies the
@@ -472,15 +493,6 @@ class GliderCheck(BaseNCCheck):
         messages.extend(attr_msgs)
         return self.make_result(level, score, out_of,
                                 'Trajectory Variable', messages)
-
-    def check_standard_names(self, dataset):
-        '''
-        Verifies that the standard names are correct.
-
-        TODO: we already check when we need an exact match. This check should
-        check the validity of all variables standard names
-        '''
-        pass
 
     def check_container_variables(self, dataset):
         '''
