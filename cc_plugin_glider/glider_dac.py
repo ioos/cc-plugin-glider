@@ -350,12 +350,14 @@ class GliderCheck(BaseNCCheck):
     check_qc_variables
     check_primary_variable_attributes
     check_monotonically_increasing_time
-    check_dim_nodata
+    check_dim_no_data
     check_depth_array
     check_trajectory_variables
     check_standard_names
     check_container_variables
     check_qartod
+    check_ancillary_variables
+    check_dtype
     check_valid_min_dtype
     check_valid_max_dtype
     '''
@@ -412,31 +414,32 @@ class GliderCheck(BaseNCCheck):
         test_ctx.assert_true(np.all(np.diff(ds.variables['time']) > 0), 'Time variable is not monotonically increasing')
         return test_ctx.to_result()
 
-    def check_dim_nodata(self, dataset):
+    def check_dim_no_data(self, dataset):
         '''
-        Gets the transposed cartesian product of the depth and time
-        variables.
+        Checks that cartesian product of the depth and time
+        variables have more than 2 valid values.
         '''
         test_ctx = TestCtx(BaseCheck.MEDIUM, 'Profile data is valid')
 
         # check that cartesian product of non-nodata/_FillValue values >= 2
         # count here checks the count of non-masked data
-        non_nodata_status = (dataset.variables['time'][:].count() *
-                             dataset.variables['depth'][:].count()) >= 2
-        test_ctx.assert_true(non_nodata_status, "Time and depth "
-                             "variables must have at least "
-                             "two valid data points together")
+        if 'time' in dataset.variables and 'depth' in dataset.variables:
+            test = (dataset.variables['time'][:].count() *
+                    dataset.variables['depth'][:].count()) >= 2
+            test_ctx.assert_true(test, "Time and depth "
+                                 "variables must have at least "
+                                 "two valid data points together")
         return test_ctx.to_result()
 
     def check_depth_array(self, dataset):
         '''
-        check abs sum of diff > 0
+        Checks that the profile data is valid (abs sum of diff > 0 for depth data)
         '''
         test_ctx = TestCtx(BaseCheck.MEDIUM, 'Profile data is valid')
-        np.abs(np.diff(dataset.variables['depth']).sum())
-        test_ctx.assert_true(np.abs(np.diff(dataset.variables['depth']).sum()) > 1e-4,
-                             "Depth array must be valid, ie  abs(Z0 - Zend) > 0"
-                             )
+        if 'depth' in dataset.variables:
+            test_ctx.assert_true(np.abs(np.diff(dataset.variables['depth']).sum()) > 1e-4,
+                                 "Depth array must be valid, ie  abs(Z0 - Zend) > 0"
+                                 )
         return test_ctx.to_result()
 
     def check_trajectory_variables(self, dataset):
@@ -470,14 +473,14 @@ class GliderCheck(BaseNCCheck):
         return self.make_result(level, score, out_of,
                                 'Trajectory Variable', messages)
 
-    # def check_standard_names(self, dataset):
-    #     '''
-    #     Verifies that the standard names are correct.
+    def check_standard_names(self, dataset):
+        '''
+        Verifies that the standard names are correct.
 
-    #     TODO: we already check when we need an exact match. This check should
-    #     check the validity of all variables standard names
-    #     '''
-    #     pass
+        TODO: we already check when we need an exact match. This check should
+        check the validity of all variables standard names
+        '''
+        pass
 
     def check_container_variables(self, dataset):
         '''
@@ -560,6 +563,49 @@ class GliderCheck(BaseNCCheck):
 
         return test_ctx.to_result()
 
+    def check_ancillary_variables(self, dataset):
+        '''
+        Check that the variables defined in ancillary_variables attribute exist
+        '''
+        level = BaseCheck.MEDIUM
+        out_of = 0
+        score = 0
+        messages = []
+
+        check_vars = dataset.variables
+        for var in check_vars:
+            if hasattr(dataset.variables[var], 'ancillary_variables'):
+                out_of += 1
+                acv = dataset.variables[var].ancillary_variables
+                test = acv in dataset.variables
+                score += int(test)
+                if not test:
+                    msg = ('Invalid ancillary_variables attribute for {}, '
+                           '{} is not a variable'.format(var, acv))
+                    messages.append(msg)
+
+        return self.make_result(level, score, out_of,
+                                'Ancillary Variables', messages)
+
+    def check_dtype(self, dataset):
+        '''
+        Check that variables are of the correct datatype
+        '''
+        level = BaseCheck.MEDIUM
+        out_of = 0
+        score = 0
+        messages = []
+
+        check_vars = dataset.variables
+        for var in check_vars:
+            stat, num_checks, msgs = util._check_dtype(dataset, var)
+            score += int(stat)
+            out_of += num_checks
+            messages.extend(msgs)
+
+        return self.make_result(level, score, out_of,
+                                'Correct variable data types', messages)
+
     def check_valid_min_dtype(self, dataset):
         '''
         Check that the valid attributes are valid data types
@@ -581,9 +627,9 @@ class GliderCheck(BaseNCCheck):
 
             if valid_min is not None:
                 test_ctx.assert_true(util.compare_dtype(np.dtype(valid_min_dtype), ncvar.dtype),
-                                     '{}:valid_min has a different data type, {}, than variable {} '
-                                     '{}'.format(var_name, valid_min_dtype, str(ncvar.dtype),
-                                                 var_name))
+                                     '{}:valid_min has a different data type, {}, than variable {}, '
+                                     '{}'.format(var_name, valid_min_dtype, var_name,
+                                                 str(ncvar.dtype)))
 
         return test_ctx.to_result()
 

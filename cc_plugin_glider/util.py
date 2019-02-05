@@ -4,6 +4,7 @@
 cc_plugin_glider/util.py
 '''
 import csv
+import numpy as np
 from cc_plugin_glider.required_var_attrs import required_var_attrs
 from cf_units import Unit
 from operator import eq
@@ -42,21 +43,24 @@ def _check_dtype(dataset, var_name):
     '''
     Convenience method to check a variable datatype validity
     '''
-    is_passing = True
+    score = 0
+    out_of = 0
     messages = []
     if var_name not in dataset.variables:
         # No need to check the attrs if the variable doesn't exist
-        return (is_passing, messages)
+        return (score, out_of, messages)
 
     var = dataset.variables[var_name]
     var_dict = required_var_attrs.get(var_name, {})
     expected_dtype = var_dict.get('dtype', None)
     if expected_dtype is not None:
-        if not compare_dtype(var.dtype, expected_dtype):
+        out_of += 1
+        score += 1
+        if not compare_dtype(var.dtype, np.dtype(expected_dtype)):
             messages.append('Variable {} is expected to have a dtype of '
                             '{}, instead has a dtype of {}'
                             ''.format(var_name, var.dtype, expected_dtype))
-            is_passing = False
+            score -= 1
 
     # check that the fill value is of the expected dtype as well
     if hasattr(var, '_FillValue') and not compare_dtype(var.dtype, var._FillValue.dtype):
@@ -64,9 +68,9 @@ def _check_dtype(dataset, var_name):
                         'match variable dtype'
                         ''.format(var_name, var._FillValue.dtype,
                                   var.dtype))
-        is_passing = False
+        out_of += 1
 
-    return (is_passing, messages)
+    return (score, out_of, messages)
 
 
 def _check_variable_attrs(dataset, var_name, required_attributes=None):
