@@ -210,12 +210,12 @@ class TestGliderCheck(unittest.TestCase):
         ts.variables['time'][0] = 0
         ts.variables['depth'][0] = 5
         # cartesian product should only contain one element and fail
-        result = self.check.check_dim_nodata(ts)
+        result = self.check.check_dim_no_data(ts)
         self.assertLess(result.value[0], result.value[1])
         # adding one more coordinate variable should make the number of passing
         # combinations equal to two, which should pass this check
         ts.variables['time'][1] = 1
-        result = self.check.check_dim_nodata(ts)
+        result = self.check.check_dim_no_data(ts)
         self.assertEqual(result.value[0], result.value[1])
 
     def test_depth_diff(self):
