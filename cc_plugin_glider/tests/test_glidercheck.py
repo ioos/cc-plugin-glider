@@ -111,7 +111,7 @@ class TestGliderCheck(unittest.TestCase):
 
     def test_standard_names(self):
         '''
-        Tests that a fie with an invalid standard name is caught (temperature)
+        Tests that a file with an invalid standard name is caught (temperature)
         '''
         # This one should pass
         dataset = self.get_dataset(STATIC_FILES['glider_std'])
@@ -130,6 +130,16 @@ class TestGliderCheck(unittest.TestCase):
         assert score < out_of
         # 10 vars checked
         assert len(results) == 10
+
+    def test_units(self):
+        '''
+        Tests that a fie with invalid units is caught (temperature)
+        '''
+        dataset = self.get_dataset(STATIC_FILES['bad_units'])
+        results = self.check.check_ctd_variable_attributes(dataset)
+
+        self.assertIn('Variable temperature units attribute must be convertible to degrees_C',
+                      results.msgs)
 
     def test_valid_lon(self):
         dataset = self.get_dataset(STATIC_FILES['bad_metadata'])

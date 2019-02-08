@@ -31,4 +31,5 @@ STATIC_FILES = {
     'bad_qc': get_filename('tests/data/bad_qc.cdl'),
     'no_qc': get_filename('tests/data/no_qc.cdl'),
     'bad_standard_name': get_filename('tests/data/bad_standard_name.cdl'),
+    'bad_units': get_filename('tests/data/bad_units.cdl'),
 }

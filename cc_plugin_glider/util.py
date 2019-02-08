@@ -108,11 +108,16 @@ def _check_variable_attrs(dataset, var_name, required_attributes=None):
             if getattr(var, attr) != check_attrs[attr]:
                 # No match, this may be an error, but first an exception for units
                 if attr == 'units':
-                    cur_unit = Unit(var.units)
-                    comp_unit = Unit(check_attrs['units'])
-                    if not cur_unit.is_convertible(comp_unit):
-                        messages.append('Variable {} units attribute must be '
-                                        'convertible to {}'.format(var_name, comp_unit))
+                    msg = ('Variable {} units attribute must be '
+                           'convertible to {}'.format(var_name, check_attrs[attr]))
+                    try:
+                        cur_unit = Unit(var.units)
+                        comp_unit = Unit(check_attrs[attr])
+                        if not cur_unit.is_convertible(comp_unit):
+                            messages.append(msg)
+                            score -= 1
+                    except ValueError:
+                        messages.append(msg)
                         score -= 1
                 else:
                     messages.append('Variable {} attribute {} must be {}'.format(var_name, attr, check_attrs[attr]))
