@@ -109,18 +109,27 @@ class TestGliderCheck(unittest.TestCase):
         result = self.check.check_global_attributes(dataset)
         self.assertEqual(result.value, (41, 64))
 
-    # def test_standard_names(self):
-    #     '''
-    #     Tests that the standard names succeed/fail
-    #     '''
+    def test_standard_names(self):
+        '''
+        Tests that a fie with an invalid standard name is caught (temperature)
+        '''
+        # This one should pass
+        dataset = self.get_dataset(STATIC_FILES['glider_std'])
+        results = self.check.check_standard_names(dataset)
+        for each in results:
+            self.assertEqual(each.value[0], each.value[1])
 
-    #     dataset = self.get_dataset(STATIC_FILES['bad_metadata'])
-    #     result = self.check.check_standard_names(dataset)
-    #     self.assertEqual(result.value, (0, 1))
-
-    #     dataset = self.get_dataset(STATIC_FILES['glider_std'])
-    #     result = self.check.check_standard_names(dataset)
-    #     self.assertEqual(result.value, (1, 1))
+        # This will fail
+        dataset = self.get_dataset(STATIC_FILES['bad_standard_name'])
+        results = self.check.check_standard_names(dataset)
+        score = 0
+        out_of = 0
+        for each in results:
+            score += each.value[0]
+            out_of += each.value[1]
+        assert score < out_of
+        # 10 vars checked
+        assert len(results) == 10
 
     def test_valid_lon(self):
         dataset = self.get_dataset(STATIC_FILES['bad_metadata'])

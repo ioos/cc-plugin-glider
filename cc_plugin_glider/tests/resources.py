@@ -29,5 +29,6 @@ STATIC_FILES = {
     'glider_std3': get_filename('tests/data/IOOS_Glider_NetCDF_v3.0.cdl'),
     'bad_location': get_filename('tests/data/bad_location.cdl'),
     'bad_qc': get_filename('tests/data/bad_qc.cdl'),
-    'no_qc': get_filename('tests/data/no_qc.cdl')
+    'no_qc': get_filename('tests/data/no_qc.cdl'),
+    'bad_standard_name': get_filename('tests/data/bad_standard_name.cdl'),
 }
