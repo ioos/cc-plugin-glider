@@ -4,8 +4,11 @@ build
 dist
 compliance_checker.egg-info
 *.egg-info
-cc_plugin_glider/tests/data/gliders/*.nc
+cc_plugin_glider/tests/data/*.nc
 
-# dotenv 
+# dotenv
 .env
 env
+
+.DS_Store
+.pytest_cache

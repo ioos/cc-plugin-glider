@@ -1,0 +1,85 @@
+netcdf bad_units {
+// This dataset uses invalid units for temperature
+dimensions:
+    time = UNLIMITED ;
+    traj_strlen = 20 ;
+variables:
+    char trajectory(traj_strlen) ;
+        trajectory:cf_role = "trajectory_id" ;
+        trajectory:comment = "A trajectory is a single deployment of a glider and may span multiple data files." ;
+        trajectory:long_name = "Trajectory/Deployment Name" ;
+
+    double time(time) ;
+        time:_FillValue = -999. ;
+        time:ancillary_variables = "time_qc" ;
+        time:calendar = "gregorian" ;
+        time:long_name = "Time" ;
+        time:observation_type = "measured" ;
+        time:standard_name = "time" ;
+        time:units = "seconds since 1970-01-01T00:00:00Z" ;
+
+    double lat(time) ;
+        lat:_FillValue = -999. ;
+        lat:ancillary_variables = "lat_qc" ;
+        lat:comment = "Values may be interpolated between measured GPS fixes" ;
+        lat:long_name = "Latitude" ;
+        lat:observation_type = "measured" ;
+        lat:platform = "platform" ;
+        lat:reference = "WGS84" ;
+        lat:standard_name = "latitude" ;
+        lat:units = "degrees_north" ;
+        lat:valid_max = 90. ;
+        lat:valid_min = -90. ;
+
+    double lon(time) ;
+        lon:_FillValue = -999. ;
+        lon:ancillary_variables = "lon_qc" ;
+        lon:comment = "Values may be interpolated between measured GPS fixes" ;
+        lon:coordinate_reference_frame = "urn:ogc:crs:EPSG::4326" ;
+        lon:long_name = "Longitude" ;
+        lon:observation_type = "measured" ;
+        lon:platform = "platform" ;
+        lon:reference = "WGS84" ;
+        lon:standard_name = "longitude" ;
+        lon:units = "degrees_east" ;
+        lon:valid_max = 90. ;
+        lon:valid_min = -90. ;
+
+    double temperature(time) ;
+        temperature:_FillValue = -999. ;
+        temperature:accuracy = " " ;
+        temperature:ancillary_variables = "temperature_qc" ;
+        temperature:instrument = "instrument_ctd" ;
+        temperature:long_name = "Temperature" ;
+        temperature:observation_type = "measured" ;
+        temperature:platform = "platform" ;
+        temperature:precision = " " ;
+        temperature:resolution = " " ;
+        temperature:standard_name = "sea_water_temperature" ;
+        temperature:units = "foobar" ;
+        temperature:valid_max = 40. ;
+        temperature:valid_min = -5. ;
+
+    double salinity(time) ;
+        salinity:_FillValue = -999. ;
+        salinity:accuracy = " " ;
+        salinity:ancillary_variables = "salinity_qc" ;
+        salinity:instrument = "instrument_ctd" ;
+        salinity:long_name = "Salinity" ;
+        salinity:observation_type = "calculated" ;
+        salinity:platform = "platform" ;
+        salinity:precision = " " ;
+        salinity:resolution = " " ;
+        salinity:standard_name = "sea_water_salinity" ;
+        salinity:units = "1e-3" ;
+        salinity:valid_max = 40. ;
+        salinity:valid_min = 0. ;
+
+    int platform ;
+        platform:_FillValue = -999 ;
+        platform:comment = " " ;
+        platform:id = " " ;
+        platform:instrument = "instrument_ctd" ;
+        platform:type = "platform" ;
+        platform:wmo_id = " " ;
+}

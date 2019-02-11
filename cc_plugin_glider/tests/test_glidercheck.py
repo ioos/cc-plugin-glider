@@ -1,13 +1,17 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+'''
+cc_plugin_glider/tests/test_glidercheck.py
+'''
 from __future__ import (absolute_import, division, print_function)
-
-import unittest
-from cc_plugin_glider.tests.resources import STATIC_FILES
-from netCDF4 import Dataset
-
-from compliance_checker.tests.helpers import MockTimeSeries
 from ..glider_dac import GliderCheck
-import requests_mock
+from cc_plugin_glider.tests.resources import STATIC_FILES
+from compliance_checker.tests.helpers import MockTimeSeries
+from netCDF4 import Dataset
 from six.moves.urllib.parse import urljoin
+import numpy as np
+import requests_mock
+import unittest
 
 try:
     basestring
@@ -50,7 +54,7 @@ class TestGliderCheck(unittest.TestCase):
         Checks that a file with the proper lat and lon do work
         '''
         dataset = self.get_dataset(STATIC_FILES['glider_std'])
-        result = self.check.check_locations(dataset)
+        result = self.check.check_lat_lon_attributes(dataset)
         self.assertTrue(result.value)
 
     def test_location_fail(self):
@@ -58,32 +62,36 @@ class TestGliderCheck(unittest.TestCase):
         Ensures the checks fail for location
         '''
         dataset = self.get_dataset(STATIC_FILES['bad_location'])
-        result = self.check.check_locations(dataset)
-        self.assertEqual(result.value, (0, 1))
+        result = self.check.check_lat_lon_attributes(dataset)
+        # File has no lat lon vars, so the test should skip
+        self.assertEqual(result.value, (0, 0))
 
     def test_ctd_fail(self):
         '''
         Ensures the ctd checks fail for temperature
         '''
         dataset = self.get_dataset(STATIC_FILES['bad_qc'])
-        result = self.check.check_ctd_variables(dataset)
-        self.assertEqual(result.value, (55, 56))
+        self.check.setup(dataset)
+        result = self.check.check_ctd_variable_attributes(dataset)
+        self.assertEqual(result.value, (38, 52))
 
     def test_ctd_vars(self):
         '''
         Ensures the ctd checks for the correct file
         '''
         dataset = self.get_dataset(STATIC_FILES['glider_std'])
-        result = self.check.check_ctd_variables(dataset)
-        self.assertEqual(result.value, (56, 56))
+        self.check.setup(dataset)
+        result = self.check.check_ctd_variable_attributes(dataset)
+        self.assertIn('Variable temperature attribute accuracy is empty', result.msgs)
 
     def test_global_fail(self):
         '''
         Tests that the global checks fail where appropriate
         '''
         dataset = self.get_dataset(STATIC_FILES['bad_qc'])
+        self.check.setup(dataset)
         result = self.check.check_global_attributes(dataset)
-        self.assertEqual(result.value, (41, 64))
+        self.assertEqual(result.value, (42, 64))
 
     def test_global(self):
         '''
@@ -91,7 +99,7 @@ class TestGliderCheck(unittest.TestCase):
         '''
         dataset = self.get_dataset(STATIC_FILES['glider_std'])
         result = self.check.check_global_attributes(dataset)
-        self.assertEqual(result.value, (64, 64))
+        self.assertEqual(result.value[0], result.value[1])
 
     def test_metadata(self):
         '''
@@ -99,20 +107,39 @@ class TestGliderCheck(unittest.TestCase):
         '''
         dataset = self.get_dataset(STATIC_FILES['bad_metadata'])
         result = self.check.check_global_attributes(dataset)
-        self.assertEqual(result.value, (40, 64))
+        self.assertEqual(result.value, (41, 64))
 
     def test_standard_names(self):
         '''
-        Tests that the standard names succeed/fail
+        Tests that a file with an invalid standard name is caught (temperature)
         '''
-
-        dataset = self.get_dataset(STATIC_FILES['bad_metadata'])
-        result = self.check.check_standard_names(dataset)
-        self.assertEqual(result.value, (0, 1))
-
+        # This one should pass
         dataset = self.get_dataset(STATIC_FILES['glider_std'])
-        result = self.check.check_standard_names(dataset)
-        self.assertEqual(result.value, (1, 1))
+        results = self.check.check_standard_names(dataset)
+        for each in results:
+            self.assertEqual(each.value[0], each.value[1])
+
+        # This will fail
+        dataset = self.get_dataset(STATIC_FILES['bad_standard_name'])
+        results = self.check.check_standard_names(dataset)
+        score = 0
+        out_of = 0
+        for each in results:
+            score += each.value[0]
+            out_of += each.value[1]
+        assert score < out_of
+        # 10 vars checked
+        assert len(results) == 10
+
+    def test_units(self):
+        '''
+        Tests that a fie with invalid units is caught (temperature)
+        '''
+        dataset = self.get_dataset(STATIC_FILES['bad_units'])
+        results = self.check.check_ctd_variable_attributes(dataset)
+
+        self.assertIn('Variable temperature units attribute must be convertible to degrees_C',
+                      results.msgs)
 
     def test_valid_lon(self):
         dataset = self.get_dataset(STATIC_FILES['bad_metadata'])
@@ -152,38 +179,76 @@ class TestGliderCheck(unittest.TestCase):
 
     def test_qc_variables(self):
         dataset = self.get_dataset(STATIC_FILES['glider_std'])
+        self.check.setup(dataset)
         result = self.check.check_qc_variables(dataset)
-        assert result.value == (96, 96)
+        self.assertEqual(result.value[0], result.value[1])
 
         dataset = self.get_dataset(STATIC_FILES['glider_std3'])
+        self.check.setup(dataset)
         result = self.check.check_qc_variables(dataset)
-        assert result.value == (96, 96)
+        self.assertEqual(result.value[0], result.value[1])
 
         dataset = self.get_dataset(STATIC_FILES['bad_qc'])
+        self.check.setup(dataset)
         result = self.check.check_qc_variables(dataset)
-        assert result.value == (86, 90)
         assert sorted(result.msgs) == [
-            'variable depth_qc must have a flag_meanings attribute',
-            'variable depth_qc must have a flag_values attribute',
-            'variable pressure_qc must have a long_name attribute',
-            'variable pressure_qc must have a standard_name attribute'
+            'Variable depth_qc must contain attribute: flag_meanings',
+            'Variable depth_qc must contain attribute: flag_values',
+            'Variable pressure_qc must contain attribute: long_name',
+            'Variable pressure_qc must contain attribute: standard_name'
         ]
 
         dataset = self.get_dataset(STATIC_FILES['no_qc'])
+        self.check.setup(dataset)
         result = self.check.check_qc_variables(dataset)
-        assert result is None
+        self.assertEqual(result.value[0], result.value[1])
 
     def test_time_series_variables(self):
-        dataset = self.get_dataset(STATIC_FILES['bad_qc'])
-        result = self.check.check_time_series_variables(dataset)
-        assert result.value == (7, 8)
-        assert sorted(result.msgs) == [
-            'Invalid ancillary_variables attribute for time, notavariable is not a variable'
-        ]
-
         dataset = self.get_dataset(STATIC_FILES['no_qc'])
-        result = self.check.check_time_series_variables(dataset)
-        assert result.value == (7, 7)
+        result = self.check.check_time_attributes(dataset)
+        self.assertEqual(result.value[0], result.value[1])
+
+    def test_time_monotonically_increasing(self):
+        """Checks that the time variable is monotonically increasing"""
+        ts = MockTimeSeries()
+        # first check failure case
+        ts.variables['time'][:] = np.zeros(500)
+        result = self.check.check_monotonically_increasing_time(ts)
+        self.assertLess(result.value[0], result.value[1])
+        # now make a monotonically increasing time variable
+        ts.variables['time'][:] = np.linspace(1, 500, 500)
+        result = self.check.check_monotonically_increasing_time(ts)
+        self.assertEqual(result.value[0], result.value[1])
+
+    def test_time_depth_non_nan(self):
+        """
+        Check that the cartesian product of time and depth coordinate variables
+        have at least two non-NaN combinations
+        """
+        ts = MockTimeSeries()
+        ts.variables['time'][0] = 0
+        ts.variables['depth'][0] = 5
+        # cartesian product should only contain one element and fail
+        result = self.check.check_dim_no_data(ts)
+        self.assertLess(result.value[0], result.value[1])
+        # adding one more coordinate variable should make the number of passing
+        # combinations equal to two, which should pass this check
+        ts.variables['time'][1] = 1
+        result = self.check.check_dim_no_data(ts)
+        self.assertEqual(result.value[0], result.value[1])
+
+    def test_depth_diff(self):
+        """
+        Checks that the sum of the first order difference over the start to
+        the end time is non-negligible
+        """
+        ts = MockTimeSeries()
+        ts.variables['depth'][:] = np.zeros(500)
+        result = self.check.check_depth_array(ts)
+        self.assertLess(result.value[0], result.value[1])
+        ts.variables['depth'][:] = np.linspace(1, 500, 500)
+        result = self.check.check_depth_array(ts)
+        self.assertEqual(result.value[0], result.value[1])
 
     def test_seanames(self):
         '''
@@ -191,7 +256,6 @@ class TestGliderCheck(unittest.TestCase):
         '''
         dataset = self.get_dataset(STATIC_FILES['bad_metadata'])
         result = self.check.check_global_attributes(dataset)
-        self.assertEqual(result.value, (40, 64))
         self.assertIn(('sea_name attribute should be from the NODC sea names list:'
                        '   is not a valid sea name'), result.msgs)
 
