@@ -36,7 +36,10 @@ def compare_dtype(dt1, dt2):
     aside from endianness.  Returns True if the two are equivalent, False
     otherwise.
     '''
-    return eq(*(dt.kind + str(dt.itemsize) for dt in (dt1, dt2)))
+    # string types map directly to Python string.  Decompose into numpy types
+    # otherwise
+    return eq(*(dt if dt == str else dt.kind + str(dt.itemsize)
+                for dt in (dt1, dt2)))
 
 
 def _check_dtype(dataset, var_name):
