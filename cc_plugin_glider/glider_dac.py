@@ -558,17 +558,19 @@ class GliderCheck(BaseNCCheck):
                                      'attribute {}:flag_values must be defined as an array of bytes'.format(qartod_var))
 
                 if isinstance(flag_values, np.ndarray):
-                    dtype = flag_values.dtype.str
+                    dtype = flag_values.dtype
                     test_ctx.assert_true(util.compare_dtype(dtype, np.dtype('|i1')),
                                          'attribute {}:flag_values has an illegal data-type, must '
                                          'be byte'.format(qartod_var))
 
                 valid_min_dtype = getattr(valid_min, 'dtype', None)
-                test_ctx.assert_true(util.compare_dtype(getattr(valid_min_dtype, 'str', None), np.dtype('|i1')),
+                test_ctx.assert_true(util.compare_dtype(valid_min_dtype,
+                                                        np.dtype('|i1')),
                                      'attribute {}:valid_min must be of type byte'.format(qartod_var))
 
                 valid_max_dtype = getattr(valid_max, 'dtype', None)
-                test_ctx.assert_true(util.compare_dtype(getattr(valid_max_dtype, 'str', None), np.dtype('|i1')),
+                test_ctx.assert_true(util.compare_dtype(valid_max_dtype,
+                                                        np.dtype('|i1')),
                                      'attribute {}:valid_max must be of type byte'.format(qartod_var))
 
         if test_ctx.out_of == 0:
