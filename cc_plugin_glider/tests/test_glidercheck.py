@@ -7,6 +7,7 @@ from __future__ import (absolute_import, division, print_function)
 from ..glider_dac import GliderCheck
 from cc_plugin_glider.tests.resources import STATIC_FILES
 from compliance_checker.tests.helpers import MockTimeSeries
+from cc_plugin_glider import util
 from netCDF4 import Dataset
 from six.moves.urllib.parse import urljoin
 import numpy as np
@@ -202,6 +203,16 @@ class TestGliderCheck(unittest.TestCase):
         self.check.setup(dataset)
         result = self.check.check_qc_variables(dataset)
         self.assertEqual(result.value[0], result.value[1])
+
+    def test_compare_string_var_dtype(self):
+        """
+        Checks that the special dtype comparison case for variable-length
+        strings is checked properly.  Calling var.dtype on a variable-length
+        string returns Python `str` type instead of a NumPy dtype
+        """
+        ts = MockTimeSeries()
+        str_var = ts.createVariable('str_var', str, ('time',))
+        self.assertTrue(util.compare_dtype(str_var.dtype, str))
 
     def test_time_series_variables(self):
         dataset = self.get_dataset(STATIC_FILES['no_qc'])
