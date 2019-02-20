@@ -64,14 +64,14 @@ def _check_dtype(dataset, var_name):
                             '{}, instead has a dtype of {}'
                             ''.format(var_name, var.dtype, expected_dtype))
             score -= 1
-
     # check that the fill value is of the expected dtype as well
-    if hasattr(var, '_FillValue') and not compare_dtype(var.dtype, var._FillValue.dtype):
-        messages.append('Variable {} _FillValue dtype does not '
-                        'match variable dtype'
-                        ''.format(var_name, var._FillValue.dtype,
-                                  var.dtype))
-        out_of += 1
+    if hasattr(var, '_FillValue') and hasattr(var._FillValue, 'dtype'):
+        if not compare_dtype(var.dtype, var._FillValue.dtype):
+            messages.append('Variable {} _FillValue dtype does not '
+                            'match variable dtype'
+                            ''.format(var_name, var._FillValue.dtype,
+                                      var.dtype))
+            out_of += 1
 
     return (score, out_of, messages)
 
