@@ -307,7 +307,7 @@ class GliderCheck(BaseNCCheck):
             score += int(test)
             out_of += 1
             if not test:
-                messages.append('Attr %s is empty or completely whitespace' % field)
+                messages.append('Attr %s is empty' % field)
 
         '''
         Verify that sea_name attribute exists and is valid
@@ -590,14 +590,15 @@ class GliderCheck(BaseNCCheck):
         check_vars = dataset.variables
         for var in check_vars:
             if hasattr(dataset.variables[var], 'ancillary_variables'):
-                out_of += 1
-                acv = dataset.variables[var].ancillary_variables
-                test = acv in dataset.variables
-                score += int(test)
-                if not test:
-                    msg = ('Invalid ancillary_variables attribute for {}, '
-                           '{} is not a variable'.format(var, acv))
-                    messages.append(msg)
+                ancillary_variables = dataset.variables[var].ancillary_variables
+                for acv in ancillary_variables.split():
+                    out_of += 1
+                    test = acv in dataset.variables
+                    score += int(test)
+                    if not test:
+                        msg = ('Invalid ancillary_variables attribute for {}, '
+                               '{} is not a variable'.format(var, acv))
+                        messages.append(msg)
 
         return self.make_result(level, score, out_of,
                                 'Ancillary Variables', messages)
