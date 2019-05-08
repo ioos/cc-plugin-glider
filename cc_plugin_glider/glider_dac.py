@@ -402,7 +402,9 @@ class GliderCheck(BaseNCCheck):
         '''
         test_ctx = TestCtx(BaseCheck.HIGH, 'Profile data is valid')
         if 'depth' in dataset.variables:
-            test_ctx.assert_true(np.abs(np.diff(dataset.variables['depth']).sum()) > 1e-4,
+            depth = dataset.variables['depth'][:]
+            test_ctx.assert_true(np.abs(np.diff(depth[~depth.mask]).sum()) >
+                                 1e-4,
                                  "Depth array must be valid, ie  abs(Z0 - Zend) > 0"
                                  )
         return test_ctx.to_result()

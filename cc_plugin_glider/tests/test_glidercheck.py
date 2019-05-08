@@ -254,12 +254,22 @@ class TestGliderCheck(unittest.TestCase):
         the end time is non-negligible
         """
         ts = MockTimeSeries()
-        ts.variables['depth'][:] = np.zeros(500)
+        ts.variables['depth'][:] = np.ma.array(np.zeros(500))
         result = self.check.check_depth_array(ts)
         self.assertLess(result.value[0], result.value[1])
-        ts.variables['depth'][:] = np.linspace(1, 500, 500)
+        depth_arr = ts.variables['depth'][:] = np.ma.array(np.linspace(1, 500,
+                                                                       500))
         result = self.check.check_depth_array(ts)
+        # mark every other value as bad/_FillValue.  Diff should exclude the
+        # masked points and result should pass
+        depth_arr[:-1:2] = np.ma.masked
+        ts.variables['depth'][:] = depth_arr
         self.assertEqual(result.value[0], result.value[1])
+        # set all to flagged, which should max of empty array, which seems
+        # to be zero under numpy's implementation.
+        depth_arr[:] = np.ma.masked
+        ts.variables['depth'][:] = depth_arr
+        self.assertLessEqual(result.value[0], result.value[1])
 
     def test_seanames(self):
         '''
