@@ -77,3 +77,26 @@ Failures in these checks should be addressed before submitting to the GliderDAC!
 - check_ioos_ra
 - check_valid_lon
 - check_ncei_tables
+
+## Optional environment variables
+Paths for cached text files for institution, project, instrument, and
+platform authority tables can be set with the following environment variables
+
+- `INSTITUTION_TABLE`
+- `PROJECT_TABLE`
+- `INSTRUMENT_TABLE`
+- `PLATFORM_TABLE`
+
+Additionally, a cached version of the NCEI `seanames.xml` file can be provided
+with a filesystem path in `SEA_NAME_TABLE` environment variable.
+
+The table below indicates the relationship of the environment variables for
+cached table locations on disk to their usual remote locations.
+
+Environment Variable | Remote Table Location
+-------------------- | ---------------------
+`INSTITUTION_TABLE` | https://gliders.ioos.us/ncei_authority_tables/institutions.txt
+`PROJECT_TABLE` | https://gliders.ioos.us/ncei_authority_tables/projects.txt
+`INSTRUMENT_TABLE` | https://gliders.ioos.us/ncei_authority_tables/instruments.txt
+`PLATFORM_TABLE` | https://gliders.ioos.us/ncei_authority_tables/platforms.txt
+`SEA_NAME_TABLE` | https://www.nodc.noaa.gov/General/NODC-Archive/seanames.xml
