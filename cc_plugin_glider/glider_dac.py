@@ -107,15 +107,6 @@ class GliderCheck(BaseNCCheck):
     def make_result(cls, level, score, out_of, name, messages):
         return Result(level, (score, out_of), name, messages)
 
-    @classmethod
-    def get_ncei_table(cls, url):
-        '''
-        returns the NCEI lookup table as a set
-
-        :param str url: the url to the NCEI table
-        '''
-        fn = lambda s: set(s.splitlines())
-        return GliderCheck.request_resource(url, 'file', fn)
 
     def setup(self, dataset):
         self.dataset = dataset
