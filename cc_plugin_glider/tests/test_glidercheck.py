@@ -10,6 +10,7 @@ from compliance_checker.tests.helpers import MockTimeSeries
 from cc_plugin_glider import util
 from netCDF4 import Dataset
 from six.moves.urllib.parse import urljoin
+import os
 import numpy as np
 import requests_mock
 import unittest
@@ -48,7 +49,37 @@ class TestGliderCheck(unittest.TestCase):
         return nc_dataset
 
     def setUp(self):
-        self.check = GliderCheck()
+        # set up authority tables to prevent needing to fetch resources over
+        # network, deal with changes, etc
+        ncei_base_table_url = 'https://gliders.ioos.us/ncei_authority_tables/'
+        # this is only a small subset
+        institutions = """MARACOOS
+University of Delaware
+Woods Hole Oceanographic Institution"""
+
+        projects = "MARACOOS"
+
+        platforms = "Test123"
+
+        instrument_makes = """Seabird GCTD
+Sea-Bird 41CP
+Sea-Bird GCTD
+Seabird GPCTD"""
+        with requests_mock.Mocker() as mock:
+            mock.get(urljoin(ncei_base_table_url, 'institutions.txt'),
+                     text=institutions)
+            mock.get(urljoin(ncei_base_table_url, 'projects.txt'),
+                     text=projects)
+            mock.get(urljoin(ncei_base_table_url, 'platforms.txt'),
+                     text=platforms)
+            mock.get(urljoin(ncei_base_table_url, 'instruments.txt'),
+                     text=instrument_makes)
+            with open(os.path.join(os.path.dirname(__file__), 'data',
+                                   'seanames.xml'), 'r') as seanames_file:
+                seanames_content = seanames_file.read()
+            mock.get("https://www.nodc.noaa.gov/General/NODC-Archive/seanames.xml",
+                     text=seanames_content)
+            self.check = GliderCheck()
 
     def test_location(self):
         '''
@@ -307,52 +338,43 @@ Seabird GPCTD"""
         platform_var = mock_nc_file.createVariable('platform', 'i', ())
         platform_var.id = "Test123"
 
-        with requests_mock.Mocker() as mock:
-            mock.get(urljoin(ncei_base_table_url, 'institutions.txt'),
-                     text=institutions)
-            mock.get(urljoin(ncei_base_table_url, 'projects.txt'),
-                     text=projects)
-            mock.get(urljoin(ncei_base_table_url, 'platforms.txt'),
-                     text=platforms)
-            mock.get(urljoin(ncei_base_table_url, 'instruments.txt'),
-                     text=instrument_makes)
-            result = self.check.check_ncei_tables(mock_nc_file)
-            # everything should pass here
-            self.assertEqual(result.value[0], result.value[1])
-            # now change to values that should fail
-            mock_nc_file.project = 'N/A'
-            mock_nc_file.institution = 'N/A'
-            # set instrument_var make_model to something not contained in the
-            # list
-            instrument_var.make_model = 'Unknown'
-            platform_var.id = 'No platform'
-            # create a dummy variable which points to an instrument that doesn't
-            # exist
-            dummy_var = mock_nc_file.createVariable('dummy', 'i', ())
-            dummy_var.instrument = 'nonexistent_var_name'
-            dummy_var.platform = 'nonexistent_var_name_2'
-            result_fail = self.check.check_ncei_tables(mock_nc_file)
-            expected_msg_set = {
-                "Global attribute project value 'N/A' not contained in https://gliders.ioos.us/ncei_authority_tables/projects.txt",
-                "Global attribute institution value 'N/A' not contained in https://gliders.ioos.us/ncei_authority_tables/institutions.txt",
-                "Attribute make_model 'Unknown' for variable instrument not contained in https://gliders.ioos.us/ncei_authority_tables/instruments.txt",
-                "Referenced instrument variable nonexistent_var_name does not exist",
-                "Attribute id 'No platform' for variable platform not contained in https://gliders.ioos.us/ncei_authority_tables/platforms.txt",
-                "Referenced platform variable nonexistent_var_name_2 does not exist"
-            }
-            self.assertSetEqual(expected_msg_set, set(result_fail.msgs))
-            # remove attributes which need to be checked to see if properly
-            # detected
-            del (instrument_var.make_model, platform_var.id,
-                 mock_nc_file.project, mock_nc_file.institution)
-            missing_attr_results = self.check.check_ncei_tables(mock_nc_file)
-            expected_missing_msgs = {
-                "Attribute project not in dataset",
-                "Attribute institution not in dataset",
-                "Attribute make_model should exist in variable instrument",
-                "Attribute id should exist in variable platform"
-            }
-            # check that all the missing attribute messages are contained in the
-            # test results
-            self.assertTrue(expected_missing_msgs <=
-                             set(missing_attr_results.msgs))
+        result = self.check.check_ncei_tables(mock_nc_file)
+        # everything should pass here
+        self.assertEqual(result.value[0], result.value[1])
+        # now change to values that should fail
+        mock_nc_file.project = 'N/A'
+        mock_nc_file.institution = 'N/A'
+        # set instrument_var make_model to something not contained in the
+        # list
+        instrument_var.make_model = 'Unknown'
+        platform_var.id = 'No platform'
+        # create a dummy variable which points to an instrument that doesn't
+        # exist
+        dummy_var = mock_nc_file.createVariable('dummy', 'i', ())
+        dummy_var.instrument = 'nonexistent_var_name'
+        dummy_var.platform = 'nonexistent_var_name_2'
+        result_fail = self.check.check_ncei_tables(mock_nc_file)
+        expected_msg_set = {
+            "Global attribute project value 'N/A' not contained in project authority table",
+            "Global attribute institution value 'N/A' not contained in institution authority table",
+            "Attribute make_model 'Unknown' for variable instrument not contained in instrument authority table",
+            "Referenced instrument variable nonexistent_var_name does not exist",
+            "Attribute id 'No platform' for variable platform not contained in platform authority table",
+            "Referenced platform variable nonexistent_var_name_2 does not exist"
+        }
+        self.assertSetEqual(expected_msg_set, set(result_fail.msgs))
+        # remove attributes which need to be checked to see if properly
+        # detected
+        del (instrument_var.make_model, platform_var.id,
+                mock_nc_file.project, mock_nc_file.institution)
+        missing_attr_results = self.check.check_ncei_tables(mock_nc_file)
+        expected_missing_msgs = {
+            "Attribute project not in dataset",
+            "Attribute institution not in dataset",
+            "Attribute make_model should exist in variable instrument",
+            "Attribute id should exist in variable platform"
+        }
+        # check that all the missing attribute messages are contained in the
+        # test results
+        self.assertTrue(expected_missing_msgs <=
+                            set(missing_attr_results.msgs))

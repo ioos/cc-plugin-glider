@@ -81,25 +81,29 @@ class GliderCheck(BaseNCCheck):
     def request_resource(cls, url, backup_resource, fn):
         # TODO: check modify header vs cached version to see if update is
         # even necessary
-        try:
-            resp = requests.get(url, timeout=30)
-            resp.raise_for_status()
-            text_contents = resp.text
-        except RequestException as e:
-            warnings.warn("Requests exception encountered while fetching data from {}: {}, using backup".format(msg))
+        fail_flag = False
+        if backup_resource is not None:
             try:
-                with open(backup_resource) as f:
-                    text_contents = f.read().strip()
-            # would include PermissionError, FileNotFoundError in Python3?
+                with open(backup_resource, 'r') as f:
+                    text_contents = f.read()
             except IOError as e:
-                warnings.warn("Could not open text file {}: {}".format(backup_resource, str(e)))
-                return None
+                warnings.warn("Could not open {}, falling back to web "
+                              "request".format(backup_resource))
+                fail_flag = True
 
-        try:
-            return fn(text_contents)
-        except Exception as e:
-            warnings.warn("Could not deserialize input text: {}".format(str(e)))
-            return None
+        elif backup_resource is None or fail_flag:
+            try:
+                resp = requests.get(url, timeout=30)
+                resp.raise_for_status()
+                text_contents = resp.text
+            except RequestException as e:
+                warnings.warn("Requests exception encountered while fetching data from {}".format(url))
+
+            try:
+                return fn(text_contents)
+            except Exception as e:
+                warnings.warn("Could not deserialize input text: {}".format(str(e)))
+                return None
 
     cf_checks = CFBaseCheck()
 
