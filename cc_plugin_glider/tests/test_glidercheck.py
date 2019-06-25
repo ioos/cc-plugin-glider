@@ -10,6 +10,7 @@ from compliance_checker.tests.helpers import MockTimeSeries
 from cc_plugin_glider import util
 from netCDF4 import Dataset
 from six.moves.urllib.parse import urljoin
+import six
 import os
 import numpy as np
 import requests_mock
@@ -76,7 +77,11 @@ Seabird GPCTD"""
                      text=instrument_makes)
             with open(os.path.join(os.path.dirname(__file__), 'data',
                                    'seanames.xml'), 'r') as seanames_file:
-                seanames_content = seanames_file.read()
+                # use decode for Py2 compatibility for handling UTF-8
+                if six.PY2:
+                    seanames_content = seanames_file.read().decode('UTF-8')
+                else:
+                    seanames_content = seanames_file.read()
             mock.get("https://www.nodc.noaa.gov/General/NODC-Archive/seanames.xml",
                      text=seanames_content)
             self.check = GliderCheck()
