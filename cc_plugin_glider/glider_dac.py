@@ -18,6 +18,7 @@ import numpy as np
 import requests
 import six
 import warnings
+import os
 from requests.exceptions import RequestException
 from lxml import etree
 
@@ -62,7 +63,8 @@ class GliderCheck(BaseNCCheck):
             # instruments have to be handled specially since they aren't
             # global attributes
             table_loc = urljoin(ncei_base_table_url, table_file)
-            self.auth_tables[global_att_name] = GliderCheck.request_resource(table_loc, None,
+            self.auth_tables[global_att_name] = GliderCheck.request_resource(table_loc,
+                                                    os.environ.get("{}_TABLE".format(global_att_name.upper())),
                                                     lambda s: set(s.splitlines()))
 
         # handle NCEI sea names table
@@ -74,7 +76,7 @@ class GliderCheck(BaseNCCheck):
             return set(tree.xpath('./seaname/seaname/text()'))
 
         self.auth_tables['sea_name'] = GliderCheck.request_resource(sea_names_url,
-                                                                    None,
+                                                                    os.environ.get("SEA_NAME_TABLE"),
                                                                     sea_name_parse)
 
     @classmethod
@@ -99,11 +101,11 @@ class GliderCheck(BaseNCCheck):
             except RequestException as e:
                 warnings.warn("Requests exception encountered while fetching data from {}".format(url))
 
-            try:
-                return fn(text_contents)
-            except Exception as e:
-                warnings.warn("Could not deserialize input text: {}".format(str(e)))
-                return None
+        try:
+            return fn(text_contents)
+        except Exception as e:
+            warnings.warn("Could not deserialize input text: {}".format(str(e)))
+            return None
 
     cf_checks = CFBaseCheck()
 
