@@ -77,3 +77,15 @@ Failures in these checks should be addressed before submitting to the GliderDAC!
 - check_ioos_ra
 - check_valid_lon
 - check_ncei_tables
+
+## Optional environment variables
+Cached text files for institution, project, instrument, and platform authority
+tables can be set with the following environment variables
+
+- `INSTITUTION_TABLE`
+- `PROJECT_TABLE`
+- `INSTRUMENT_TABLE`
+- `PLATFORM_TABLE`
+
+Additionally, the NCEI `seanames.xml` file can use a cached location with the
+`SEANAMES_TABLE` environment variable.
