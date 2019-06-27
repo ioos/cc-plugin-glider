@@ -368,7 +368,10 @@ class GliderCheck(BaseNCCheck):
         '''
         Verify that sea_name attribute exists and is valid
         '''
-        sea_names = {sn.lower() for sn in self.auth_tables['sea_name']}
+        if self.auth_tables['sea_name'] is not None:
+            sea_names = {sn.lower() for sn in self.auth_tables['sea_name']}
+        else:
+            raise RuntimeError("Was unable to fetch sea names table")
         sea_name = getattr(dataset, 'sea_name', '').replace(', ', ',')
         if sea_name:
             # Ok score a point for the fact that the attribute exists
@@ -804,11 +807,11 @@ class GliderCheck(BaseNCCheck):
                 if not global_att_present:
                     continue
 
-            try:
+            if self.auth_tables[global_att_name] is not None:
                 check_set = self.auth_tables[global_att_name]
-            except IndexError:
-                warnings.warn("Could not fetch authority table for attribute {}, skipping".format(global_att_name))
-                continue
+            else:
+                raise RuntimeError("Was unable to fetch {} table"
+                                   .format(global_att_name))
 
             # not truly a global attribute here, needs special handling for
             # instrument case

@@ -382,4 +382,10 @@ Seabird GPCTD"""
         # check that all the missing attribute messages are contained in the
         # test results
         self.assertTrue(expected_missing_msgs <=
-                            set(missing_attr_results.msgs))
+                        set(missing_attr_results.msgs))
+
+        for name in ('institution', 'instrument', 'platform', 'project'):
+            self.check.auth_tables[name] = None
+
+        self.assertRaises(RuntimeError, self.check.check_ncei_tables,
+                          mock_nc_file)
