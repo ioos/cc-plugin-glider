@@ -18,6 +18,11 @@ import numpy as np
 import requests
 import six
 import warnings
+import os
+from requests.exceptions import RequestException
+from lxml import etree
+
+
 try:
     basestring
 except NameError:
@@ -41,22 +46,73 @@ class GliderCheck(BaseNCCheck):
         'Slocum Glider'
     }
 
+    def __init__(self):
+        # try to get the sea names table
+        ncei_base_table_url = 'https://gliders.ioos.us/ncei_authority_tables/'
+        # might refactor if the authority tables names change
+        table_type = {'project': 'projects.txt',
+                      'platform': 'platforms.txt',
+                      'instrument': 'instruments.txt',
+                      'institution': 'institutions.txt'}
+        # some top level attrs map to other things
+        var_remap = {'platform': 'id',
+                     'instrument': 'make_model'}
+
+        self.auth_tables = {}
+        for global_att_name, table_file in six.iteritems(table_type):
+            # instruments have to be handled specially since they aren't
+            # global attributes
+            table_loc = urljoin(ncei_base_table_url, table_file)
+            self.auth_tables[global_att_name] = GliderCheck.request_resource(table_loc,
+                                                    os.environ.get("{}_TABLE".format(global_att_name.upper())),
+                                                    lambda s: set(s.splitlines()))
+
+        # handle NCEI sea names table
+        sea_names_url = 'https://www.nodc.noaa.gov/General/NODC-Archive/seanames.xml'
+        def sea_name_parse(text):
+            """Helper function to handle utf-8 parsing of sea name XML table"""
+            utf8_parser = etree.XMLParser(encoding='utf-8')
+            tree = etree.fromstring(text.encode('utf-8'), parser=utf8_parser)
+            return set(tree.xpath('./seaname/seaname/text()'))
+
+        self.auth_tables['sea_name'] = GliderCheck.request_resource(sea_names_url,
+                                                                    os.environ.get("SEA_NAME_TABLE"),
+                                                                    sea_name_parse)
+
+    @classmethod
+    def request_resource(cls, url, backup_resource, fn):
+        # TODO: check modify header vs cached version to see if update is
+        # even necessary
+        fail_flag = False
+        if backup_resource is not None:
+            try:
+                with open(backup_resource, 'r') as f:
+                    text_contents = f.read()
+            except IOError as e:
+                warnings.warn("Could not open {}, falling back to web "
+                              "request".format(backup_resource))
+                fail_flag = True
+
+        elif backup_resource is None or fail_flag:
+            try:
+                resp = requests.get(url, timeout=10)
+                resp.raise_for_status()
+                text_contents = resp.text
+            except RequestException as e:
+                warnings.warn("Requests exception encountered while fetching data from {}".format(url))
+
+        try:
+            return fn(text_contents)
+        except Exception as e:
+            warnings.warn("Could not deserialize input text: {}".format(str(e)))
+            return None
+
     cf_checks = CFBaseCheck()
 
     @classmethod
     def make_result(cls, level, score, out_of, name, messages):
         return Result(level, (score, out_of), name, messages)
 
-    @classmethod
-    def get_ncei_table(cls, url):
-        '''
-        returns the NCEI lookup table as a set
-
-        :param str url: the url to the NCEI table
-        '''
-        resp = requests.get(url, timeout=30)
-        resp.raise_for_status()
-        return {line for line in resp.iter_lines(decode_unicode=True)}
 
     def setup(self, dataset):
         self.dataset = dataset
@@ -312,7 +368,10 @@ class GliderCheck(BaseNCCheck):
         '''
         Verify that sea_name attribute exists and is valid
         '''
-        sea_names = [sn.lower() for sn in util.get_sea_names()]
+        if self.auth_tables['sea_name'] is not None:
+            sea_names = {sn.lower() for sn in self.auth_tables['sea_name']}
+        else:
+            raise RuntimeError("Was unable to fetch sea names table")
         sea_name = getattr(dataset, 'sea_name', '').replace(', ', ',')
         if sea_name:
             # Ok score a point for the fact that the attribute exists
@@ -743,14 +802,18 @@ class GliderCheck(BaseNCCheck):
                 if not global_att_present:
                     continue
 
-            table_loc = urljoin(ncei_base_table_url, table_file)
-            try:
-                check_set = GliderCheck.get_ncei_table(table_loc)
-            except requests.RequestError as e:
-                warnings.warn("Hit exception while processing {}, skipping. "
-                              "{}".format(table_file, str(e)))
-                # should this be considered a failure?
-                continue
+            if global_att_name not in {'instrument', 'platform'}:
+                global_att_present = hasattr(dataset, global_att_name)
+                test_ctx.assert_true(global_att_present,
+                                     "Attribute {} not in dataset".format(global_att_name))
+                if not global_att_present:
+                    continue
+
+            if self.auth_tables[global_att_name] is not None:
+                check_set = self.auth_tables[global_att_name]
+            else:
+                raise RuntimeError("Was unable to fetch {} table"
+                                   .format(global_att_name))
 
             # not truly a global attribute here, needs special handling for
             # instrument case
@@ -785,17 +848,17 @@ class GliderCheck(BaseNCCheck):
                         continue
                     search_attr = getattr(var, var_remap[global_att_name])
 
-                    msg = "Attribute {} '{}' for variable {} not contained in {}".format(var_remap[global_att_name],
+                    msg = "Attribute {} '{}' for variable {} not contained in {} authority table".format(var_remap[global_att_name],
                                                                                          search_attr, var_name,
-                                                                                         table_loc)
+                                                                                         global_att_name)
                     test_ctx.assert_true(search_attr in check_set, msg)
 
             else:
                 # check for global attribute existence already handled above
                 global_att_value = getattr(dataset, global_att_name)
-                msg = "Global attribute {} value '{}' not contained in {}".format(global_att_name,
+                msg = "Global attribute {} value '{}' not contained in {} authority table".format(global_att_name,
                                                                                   global_att_value,
-                                                                                  table_loc)
+                                                                                  global_att_name)
                 test_ctx.assert_true(global_att_value in check_set, msg)
 
         return test_ctx.to_result()

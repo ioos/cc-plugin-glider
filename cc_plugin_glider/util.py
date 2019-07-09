@@ -10,26 +10,6 @@ from cf_units import Unit
 from operator import eq
 from pkg_resources import resource_filename
 
-_SEA_NAMES = None
-
-
-def get_sea_names():
-    '''
-    Returns a list of NODC sea names
-
-    source of list: https://www.nodc.noaa.gov/General/NODC-Archive/seanamelist.txt
-    '''
-    global _SEA_NAMES
-    if _SEA_NAMES is None:
-        buf = {}
-        with open(resource_filename('cc_plugin_glider', 'data/seanames.csv'), 'r') as f:
-            reader = csv.reader(f)
-            for code, sea_name in reader:
-                buf[sea_name] = code
-        _SEA_NAMES = buf
-    return _SEA_NAMES
-
-
 def compare_dtype(dt1, dt2):
     '''
     Helper function to compare two numpy dtypes to see if they are equivalent
