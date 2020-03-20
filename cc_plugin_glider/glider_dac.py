@@ -12,7 +12,7 @@ from __future__ import (absolute_import, division, print_function)
 from cc_plugin_glider import util
 from compliance_checker import __version__
 from compliance_checker.base import BaseCheck, BaseNCCheck, Result, TestCtx
-from compliance_checker.cf.cf import CFBaseCheck
+from compliance_checker.cf.cf import CF1_6Check
 from six.moves.urllib.parse import urljoin
 import numpy as np
 import requests
@@ -107,7 +107,7 @@ class GliderCheck(BaseNCCheck):
             warnings.warn("Could not deserialize input text: {}".format(str(e)))
             return None
 
-    cf_checks = CFBaseCheck()
+    cf_checks = CF1_6Check()
 
     @classmethod
     def make_result(cls, level, score, out_of, name, messages):
