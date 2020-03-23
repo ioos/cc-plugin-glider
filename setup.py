@@ -16,6 +16,7 @@ setup(
     version=versioneer.get_version(),
     description="Compliance Checker Glider DAC plugin",
     long_description=readme(),
+    long_description_content_type="text/markdown",
     license='Apache License 2.0',
     author="Robert Fratantonio",
     author_email="robert.fratantonio@rpsgroup.com",
