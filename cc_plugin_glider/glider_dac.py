@@ -69,15 +69,11 @@ class GliderCheck(BaseNCCheck):
 
         # handle NCEI sea names table
         sea_names_url = 'https://www.nodc.noaa.gov/General/NODC-Archive/seanames.xml'
-        def sea_name_parse(text):
-            """Helper function to handle utf-8 parsing of sea name XML table"""
-            utf8_parser = etree.XMLParser(encoding='utf-8')
-            tree = etree.fromstring(text.encode('utf-8'), parser=utf8_parser)
-            return set(tree.xpath('./seaname/seaname/text()'))
+
 
         self.auth_tables['sea_name'] = GliderCheck.request_resource(sea_names_url,
                                                                     os.environ.get("SEA_NAME_TABLE"),
-                                                                    sea_name_parse)
+                                                                    util.sea_name_parse)
 
     @classmethod
     def request_resource(cls, url, backup_resource, fn):
@@ -365,13 +361,7 @@ class GliderCheck(BaseNCCheck):
             if not test:
                 messages.append('Attr %s is empty' % field)
 
-        '''
-        Verify that sea_name attribute exists and is valid
-        '''
-        if self.auth_tables['sea_name'] is not None:
-            sea_names = {sn.lower() for sn in self.auth_tables['sea_name']}
-        else:
-            raise RuntimeError("Was unable to fetch sea names table")
+        sea_names = {sn.lower() for sn in util.get_sea_names()}
         sea_name = getattr(dataset, 'sea_name', '').replace(', ', ',')
         if sea_name:
             # Ok score a point for the fact that the attribute exists
@@ -383,8 +373,9 @@ class GliderCheck(BaseNCCheck):
                 score += int(test)
                 out_of += 1
                 if not test:
-                    messages.append(('sea_name attribute should be from the NODC sea names list:'
-                                     ' {} is not a valid sea name').format(sea))
+                    messages.append(('sea_name attribute should be from the '
+                                     'NODC sea names list: {} is not a valid '
+                                     'sea name').format(sea))
         else:
             out_of += 1
             messages.append('Attr sea_name not present')

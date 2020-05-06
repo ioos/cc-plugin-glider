@@ -9,6 +9,7 @@ from cc_plugin_glider.required_var_attrs import required_var_attrs
 from cf_units import Unit
 from operator import eq
 from pkg_resources import resource_filename
+from lxml import etree
 
 def compare_dtype(dt1, dt2):
     '''
@@ -119,3 +120,8 @@ def _check_variable_attrs(dataset, var_name, required_attributes=None):
 
     return (score, out_of, messages)
 
+def sea_name_parse(text):
+    """Helper function to handle utf-8 parsing of sea name XML table"""
+    utf8_parser = etree.XMLParser(encoding='utf-8')
+    tree = etree.fromstring(text.encode('utf-8'), parser=utf8_parser)
+    return set(tree.xpath('./seaname/seaname/text()'))
