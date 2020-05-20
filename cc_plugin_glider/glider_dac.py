@@ -68,7 +68,7 @@ class GliderCheck(BaseNCCheck):
                                                     lambda s: set(s.splitlines()))
 
         # handle NCEI sea names table
-        sea_names_url = 'https://www.nodc.noaa.gov/General/NODC-Archive/seanames.xml'
+        sea_names_url = 'https://www.ncei.noaa.gov/data/oceans/ncei/vocabulary/seanames.xml'
         def sea_name_parse(text):
             """Helper function to handle utf-8 parsing of sea name XML table"""
             utf8_parser = etree.XMLParser(encoding='utf-8')

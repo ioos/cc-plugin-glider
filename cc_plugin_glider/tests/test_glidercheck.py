@@ -82,7 +82,7 @@ Seabird GPCTD"""
                     seanames_content = seanames_file.read().decode('UTF-8')
                 else:
                     seanames_content = seanames_file.read()
-            mock.get("https://www.nodc.noaa.gov/General/NODC-Archive/seanames.xml",
+            mock.get("https://www.ncei.noaa.gov/data/oceans/ncei/vocabulary/seanames.xml",
                      text=seanames_content)
             self.check = GliderCheck()
 
