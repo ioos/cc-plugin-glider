@@ -40,7 +40,7 @@ See the [ioos/compliance-checker](https://github.com/ioos/compliance-checker) fo
 
 
 ## Summary of the Checks
-The checks have been designed to help data providers submit the highest quality data to the GliderDAC. Submitting uncompliant data to the DAC may result in services not working. For example, not providing the correct Sea Name in the GLobal atttributes may put your glider depoyment into the wrong region on the GliderMap. Not providing proper metadata about the platform and instruments, and attribution may prevent NCEI from archiving your data. And not making your files CF compliant could prevent the files from showing up on ERDDAP and THREDDS servers all together.
+The checks have been designed to help data providers submit the highest quality data to the GliderDAC. Submitting uncompliant data to the DAC may result in services not working. For example, not providing the correct Sea Name in the GLobal attributes may put your glider deployment into the wrong region on the GliderMap. Not providing proper metadata about the platform and instruments, and attribution may prevent NCEI from archiving your data. And not making your files CF compliant could prevent the files from showing up on ERDDAP and THREDDS servers all together.
 
 ### High priority checks
 Failures in these checks should be addressed before submitting to the GliderDAC!
