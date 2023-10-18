@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 cc_plugin_glider/required_var_attrs.py
 
@@ -101,7 +100,6 @@ required_var_attrs = {
         "precision": None,
         "reference_datum": None,
         "resolution": None,
-        "standard_name": None,
         "valid_max": None,
         "valid_min": None,
     },
@@ -120,7 +118,6 @@ required_var_attrs = {
         "precision": None,
         "reference_datum": None,
         "resolution": None,
-        "standard_name": None,
         "valid_max": None,
         "valid_min": None,
     },

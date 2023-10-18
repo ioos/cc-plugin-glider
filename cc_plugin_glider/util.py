@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 cc_plugin_glider/util.py
 """

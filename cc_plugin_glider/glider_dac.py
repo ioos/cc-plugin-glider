@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 cc_plugin_glider.glider_dac.py
 
@@ -9,23 +7,17 @@ https://github.com/ioos/ioosngdac/wiki
 
 import os
 import warnings
+from urllib.parse import urljoin
 
 import numpy as np
 import requests
-import six
 from compliance_checker import __version__
 from compliance_checker.base import BaseCheck, BaseNCCheck, Result, TestCtx
 from compliance_checker.cf.cf import CF1_6Check
 from lxml import etree
 from requests.exceptions import RequestException
-from six.moves.urllib.parse import urljoin
 
 from cc_plugin_glider import util
-
-try:
-    basestring
-except NameError:
-    basestring = str
 
 
 class GliderCheck(BaseNCCheck):
@@ -49,11 +41,9 @@ class GliderCheck(BaseNCCheck):
             "instrument": "instruments.txt",
             "institution": "institutions.txt",
         }
-        # some top level attrs map to other things
-        var_remap = {"platform": "id", "instrument": "make_model"}
 
         self.auth_tables = {}
-        for global_att_name, table_file in six.iteritems(table_type):
+        for global_att_name, table_file in table_type.items():
             # instruments have to be handled specially since they aren't
             # global attributes
             table_loc = urljoin(ncei_base_table_url, table_file)
@@ -91,7 +81,8 @@ class GliderCheck(BaseNCCheck):
                     text_contents = f.read()
             except OSError:
                 warnings.warn(
-                    f"Could not open {backup_resource}, falling back to web " "request",
+                    f"Could not open {backup_resource}, falling back to web request",
+                    stacklevel=2,
                 )
                 fail_flag = True
 
@@ -103,12 +94,13 @@ class GliderCheck(BaseNCCheck):
             except RequestException:
                 warnings.warn(
                     f"Requests exception encountered while fetching data from {url}",
+                    stacklevel=2,
                 )
 
         try:
             return fn(text_contents)
         except Exception as e:
-            warnings.warn(f"Could not deserialize input text: {str(e)}")
+            warnings.warn(f"Could not deserialize input text: {str(e)}", stacklevel=2)
             return None
 
     cf_checks = CF1_6Check()
@@ -359,7 +351,7 @@ class GliderCheck(BaseNCCheck):
                 messages.append("Attr %s not present" % field)
                 continue
             v = getattr(dataset, field, "")
-            if isinstance(v, basestring):
+            if isinstance(v, str):
                 test = len(v.strip()) > 0
             else:
                 test = True
@@ -748,7 +740,7 @@ class GliderCheck(BaseNCCheck):
             ncvar = dataset.variables[var_name]
 
             valid_min = getattr(dataset.variables[var_name], "valid_min", None)
-            if isinstance(valid_min, basestring):
+            if isinstance(valid_min, str):
                 valid_min_dtype = "string"
             elif isinstance(valid_min, float):
                 valid_min_dtype = "float64"
@@ -776,7 +768,7 @@ class GliderCheck(BaseNCCheck):
             ncvar = dataset.variables[var_name]
 
             valid_max = getattr(dataset.variables[var_name], "valid_max", None)
-            if isinstance(valid_max, basestring):
+            if isinstance(valid_max, str):
                 valid_max_dtype = "string"
             elif isinstance(valid_max, float):
                 valid_max_dtype = "float64"
@@ -847,7 +839,6 @@ class GliderCheck(BaseNCCheck):
             "institution, platform_type, and "
             "instrument",
         )
-        ncei_base_table_url = "https://gliders.ioos.us/ncei_authority_tables/"
         # might refactor if the authority tables names change
         table_type = {
             "project": "projects.txt",
@@ -858,7 +849,7 @@ class GliderCheck(BaseNCCheck):
         # some top level attrs map to other things
         var_remap = {"platform": "id", "instrument": "make_model"}
 
-        for global_att_name, table_file in six.iteritems(table_type):
+        for global_att_name, _ in table_type.items():
             # instruments have to be handled specially since they aren't
             # global attributes
             if global_att_name not in {"instrument", "platform"}:

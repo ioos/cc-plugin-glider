@@ -1,11 +1,8 @@
-#!/usr/bin/env python
 """
 cc_plugin_glider/tests/resources.py
 """
-import os
-import subprocess
-
 import importlib
+import subprocess
 
 
 def get_filename(path):

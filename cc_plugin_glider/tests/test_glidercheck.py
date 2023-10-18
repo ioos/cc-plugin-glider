@@ -1,25 +1,19 @@
-#!/usr/bin/env python
 """
 cc_plugin_glider/tests/test_glidercheck.py
 """
 import os
 import unittest
+from urllib.parse import urljoin
 
 import numpy as np
 import requests_mock
 from compliance_checker.tests.helpers import MockTimeSeries
 from netCDF4 import Dataset
-from six.moves.urllib.parse import urljoin
 
 from cc_plugin_glider import util
 from cc_plugin_glider.tests.resources import STATIC_FILES
 
 from ..glider_dac import GliderCheck
-
-try:
-    basestring
-except NameError:
-    basestring = str
 
 
 class TestGliderCheck(unittest.TestCase):
@@ -35,12 +29,9 @@ class TestGliderCheck(unittest.TestCase):
         name = self.id()
         name = name.split(".")
         if name[0] not in ["ion", "pyon"]:
-            return "%s (%s)" % (name[-1], ".".join(name[:-1]))
+            return f"{name[-1]} ({'.'.join(name[:-1])})"
         else:
-            return "%s ( %s )" % (
-                name[-1],
-                ".".join(name[:-2]) + ":" + ".".join(name[-2:]),
-            )  # noqa
+            return f"{name[-1]} ({'.'.join(name[:-2])} : {'.'.join(name[-2:])})"
 
     __str__ = __repr__
 
@@ -48,7 +39,7 @@ class TestGliderCheck(unittest.TestCase):
         """
         Return a pairwise object for the dataset
         """
-        if isinstance(nc_dataset, basestring):
+        if isinstance(nc_dataset, str):
             nc_dataset = Dataset(nc_dataset, "r")
             self.addCleanup(nc_dataset.close)
         return nc_dataset
@@ -344,20 +335,6 @@ Seabird GPCTD"""
     def test_ncei_compliance(self):
         """Tests that the NCEI compliance suite works"""
 
-        ncei_base_table_url = "https://gliders.ioos.us/ncei_authority_tables/"
-        # this is only a small subset
-        institutions = """MARACOOS
-University of Delaware
-Woods Hole Oceanographic Institution"""
-
-        projects = """MARACOOS"""
-
-        platforms = """Test123"""
-
-        instrument_makes = """Seabird GCTD
-Sea-Bird 41CP
-Sea-Bird GCTD
-Seabird GPCTD"""
         mock_nc_file = MockTimeSeries()
         mock_nc_file.project = "MARACOOS"
         mock_nc_file.institution = "MARACOOS"
