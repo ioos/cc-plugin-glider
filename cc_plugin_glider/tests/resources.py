@@ -5,18 +5,18 @@ cc_plugin_glider/tests/resources.py
 import os
 import subprocess
 
-from pkg_resources import resource_filename
+import importlib
 
 
 def get_filename(path):
     """
     Returns the path to a valid dataset
     """
-    filename = resource_filename("cc_plugin_glider", path)
-    nc_path = filename.replace(".cdl", ".nc")
-    if not os.path.exists(nc_path):
+    filename = importlib.resources.files("cc_plugin_glider") / path
+    nc_path = filename.with_suffix(".nc")
+    if not nc_path.exists():
         generate_dataset(filename, nc_path)
-    return nc_path
+    return str(nc_path)
 
 
 def generate_dataset(cdl_path, nc_path):
