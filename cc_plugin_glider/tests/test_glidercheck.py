@@ -75,13 +75,8 @@ Seabird GPCTD"""
                      text=platforms)
             mock.get(urljoin(ncei_base_table_url, 'instruments.txt'),
                      text=instrument_makes)
-            with open(os.path.join(os.path.dirname(__file__), 'data',
-                                   'seanames.xml'), 'r') as seanames_file:
-                # use decode for Py2 compatibility for handling UTF-8
-                if six.PY2:
-                    seanames_content = seanames_file.read().decode('UTF-8')
-                else:
-                    seanames_content = seanames_file.read()
+            with open(os.path.join(os.path.dirname(__file__), 'data', 'seanames.xml'), 'r', encoding="utf8") as seanames_file:
+                seanames_content = seanames_file.read()
             mock.get("https://www.ncei.noaa.gov/data/oceans/ncei/vocabulary/seanames.xml",
                      text=seanames_content)
             self.check = GliderCheck()
