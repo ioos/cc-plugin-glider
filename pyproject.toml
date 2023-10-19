@@ -6,6 +6,10 @@ requires = [
   "wheel",
 ]
 
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
 [project]
 name = "cc-plugin-glider"
 description = "Compliance Checker Glider DAC plugin"
@@ -25,13 +29,13 @@ dynamic = [
   "dependencies",
   "version",
 ]
+
 [project.urls]
 documentation = "http://ioos.github.io/compliance-checker/"
 homepage = "https://github.com/ioos/cc-plugin-glider"
 repository = "https://github.com/ioos/cc-plugin-glider"
 [project.entry-points."compliance_checker.suites"]
 "gliderdac" = "cc_plugin_glider.glider_dac:GliderCheck"
-
 [tool.setuptools]
 packages = ["cc_plugin_glider"]
 include-package-data = true
