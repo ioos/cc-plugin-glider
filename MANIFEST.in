@@ -2,8 +2,8 @@ include *.txt
 include README.md
 include pyproject.toml
 
-include cc_plugin_glider/tests/data/gliders/*.cdl
-include cc_plugin_glider/tests/data/gliders/*.xml
+recursive-include cc_plugin_glider *.cdl
+recursive-include cc_plugin_glider *.xml
 
 prune .github
 prune *.egg-info
