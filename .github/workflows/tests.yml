@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: [ "3.9", "3.10", "3.11" ]
         os: [windows-latest, ubuntu-latest, macos-latest]
       fail-fast: false
 
@@ -37,7 +37,7 @@ jobs:
 
     - name: Test latest compliance-checker
       shell: bash -l {0}
-      if: ${{ (matrix.os == 'ubuntu-latest') && (matrix.python-version == '3.10') }}
+      if: ${{ (matrix.os == 'ubuntu-latest') && (matrix.python-version == '3.11') }}
       run: >
         micromamba remove compliance-checker --yes
         && pip install git+https://github.com/ioos/compliance-checker.git

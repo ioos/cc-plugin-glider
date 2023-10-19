@@ -234,7 +234,7 @@ variables:
         :contributor_role = "imaginer" ;                                     // Comma-separated list of roles for each contributor listed in contributor_names
         :creator_email = "luke@domain.com" ;                                 // E-Mail address of the creator responsible for the dataset
         :creator_name = "Luke" ;                                             // Name of the creator
-        :creator_url = "http://luke.com" ;                                   // The URL of the person (or other creator type specified by the creator_type attribute) principally responsible for creating this data. 
+        :creator_url = "http://luke.com" ;                                   // The URL of the person (or other creator type specified by the creator_type attribute) principally responsible for creating this data.
         :date_created = "2017-02-01" ;                                       // ISO-8601 Date string for when the dataset was created
         :date_issued = "2017-02-01" ;                                        // ISO-8601 Date string for when the dataset was issued
         :date_modified = "2017-02-01" ;                                      // ISO-8601 Date string for when the dataset was last modified
@@ -262,4 +262,3 @@ variables:
         :title = "Example Deployment" ;                                      // GliderDAC Deployment Identifier
         :wmo_id = "" ;                                                       // WMO Identifier assigned by the WMO office.
 }
-
