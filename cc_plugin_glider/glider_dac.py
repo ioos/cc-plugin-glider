@@ -31,7 +31,9 @@ class GliderCheck(BaseNCCheck):
     _cc_display_headers = {3: "Required", 2: "Recommended", 1: "Suggested"}
     acceptable_platform_types = {"Seaglider", "Spray Glider", "Slocum Glider"}
 
-    def __init__(self):
+    def __init__(self, options=None):
+        # Pass through testing options for gliderdac
+        self.options = options
         # try to get the sea names table
         ncei_base_table_url = "https://gliders.ioos.us/ncei_authority_tables/"
         # might refactor if the authority tables names change
@@ -201,7 +203,11 @@ class GliderCheck(BaseNCCheck):
 
         check_vars = ["lat", "lon"]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -236,7 +242,11 @@ class GliderCheck(BaseNCCheck):
 
         check_vars = ["pressure", "depth"]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -261,7 +271,11 @@ class GliderCheck(BaseNCCheck):
 
         check_vars = ["temperature", "conductivity", "salinity", "density"]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -289,7 +303,11 @@ class GliderCheck(BaseNCCheck):
             "v",
         ]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -596,7 +614,11 @@ class GliderCheck(BaseNCCheck):
             "instrument_ctd",
         ]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -769,8 +791,7 @@ class GliderCheck(BaseNCCheck):
             if valid_max is not None:
                 test_ctx.assert_true(
                     util.compare_dtype(np.dtype(valid_max_dtype), ncvar.dtype),
-                    f"{var_name}:valid_max has a different data type, {valid_max_dtype}, than variable {str(ncvar.dtype)} "
-                    f"{var_name}",
+                    f"{var_name}:valid_max has a different data type, {valid_max_dtype}, than variable {ncvar.dtype} {var_name}",
                 )
 
         return test_ctx.to_result()
@@ -809,8 +830,18 @@ class GliderCheck(BaseNCCheck):
             return
 
         longitude = dataset.variables["lon"]
-        valid_min = longitude.valid_min
-        valid_max = longitude.valid_max
+        valid_min = getattr(longitude, "valid_min", None)
+        if valid_min is None:
+            test_ctx.assert_true(
+                False,
+                "valid_min attribute for longitude should be defined",
+            )
+        valid_max = getattr(longitude, "valid_max", None)
+        if valid_min is None:
+            test_ctx.assert_true(
+                False,
+                "valid_max attribute for longitude should be defined",
+            )
         test_ctx.assert_true(
             not (valid_min == -90 and valid_max == 90),
             "Longitude's valid_min and valid_max are [-90, 90], it's likely this was a mistake",
