@@ -6,8 +6,7 @@ This [ioos/compliance-checker](https://github.com/ioos/compliance-checker) plugi
 
 | Standard                                                                                             | Checker Name |
 | ---------------------------------------------------------------------------------------------------- | ------------ |
-| [Glider DAC](https://github.com/ioos/ioosngdac/wiki/NGDAC-NetCDF-File-Format-Version-2)              |  gliderdac   |
-
+| [Glider DAC](https://ioos.github.io/glider-dac/ngdac-netcdf-file-format-version-2.html)              |  gliderdac   |
 
 ## Installation
 
@@ -99,4 +98,4 @@ Environment Variable | Remote Table Location
 `PROJECT_TABLE` | https://gliders.ioos.us/ncei_authority_tables/projects.txt
 `INSTRUMENT_TABLE` | https://gliders.ioos.us/ncei_authority_tables/instruments.txt
 `PLATFORM_TABLE` | https://gliders.ioos.us/ncei_authority_tables/platforms.txt
-`SEA_NAME_TABLE` | https://www.nodc.noaa.gov/General/NODC-Archive/seanames.xml
+`SEA_NAME_TABLE` | https://www.ncei.noaa.gov/data/oceans/ncei/vocabulary/seanames.xml
