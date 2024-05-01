@@ -57,7 +57,7 @@ def _check_dtype(dataset, var_name):
     return (score, out_of, messages)
 
 
-def _check_variable_attrs(dataset, var_name, required_attributes=None, options=set()):
+def _check_variable_attrs(dataset, var_name, required_attributes=None, options=None):
     """
     Convenience method to check a variable attributes based on the
     expected_vars dict
@@ -73,8 +73,9 @@ def _check_variable_attrs(dataset, var_name, required_attributes=None, options=s
 
     # Get the expected attrs to check
     check_attrs = required_attributes or required_var_attrs.get(var_name, {})
-    if 'ancillary_variables' in check_attrs and 'no_ancillary_variables' in options:
-        del check_attrs['ancillary_variables']
+    if not options is None:
+        if 'ancillary_variables' in check_attrs and 'no_ancillary_variables' in options:
+            del check_attrs['ancillary_variables']
     var_attrs = set(var.ncattrs())
     for attr in check_attrs:
         if attr == "dtype":
@@ -110,11 +111,7 @@ def _check_variable_attrs(dataset, var_name, required_attributes=None, options=s
                         score -= 1
                 else:
                     messages.append(
-                        "Variable {} attribute {} must be {}".format(
-                            var_name,
-                            attr,
-                            check_attrs[attr],
-                        ),
+                        f"Variable {var_name} attribute {attr} must be {check_attrs[attr]}"
                     )
                     score -= 1
         else:

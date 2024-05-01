@@ -199,7 +199,7 @@ class GliderCheck(BaseNCCheck):
             test = dimension in dataset.dimensions
             score += int(test)
             if not test:
-                messages.append("%s is not a valid dimension" % dimension)
+                messages.append(f"{dimension} is not a valid dimension")
         return self.make_result(level, score, out_of, "Required Dimensions", messages)
 
     def check_lat_lon_attributes(self, dataset):
@@ -362,7 +362,7 @@ class GliderCheck(BaseNCCheck):
             score += int(test)
             out_of += 1
             if not test:
-                messages.append("Attr %s not present" % field)
+                messages.append(f"Attr {field} not present")
                 continue
             v = getattr(dataset, field, "")
             if isinstance(v, str):
@@ -372,7 +372,7 @@ class GliderCheck(BaseNCCheck):
             score += int(test)
             out_of += 1
             if not test:
-                messages.append("Attr %s is empty" % field)
+                messages.append(f"Attr {field} is empty")
 
         """
         Verify that sea_name attribute exists and is valid
@@ -456,7 +456,7 @@ class GliderCheck(BaseNCCheck):
         """
         # shouldn't this already be handled by CF trajectory featureType?
         test_ctx = TestCtx(BaseCheck.HIGH, "Profile data is valid")
-        if 'acoustic_profile_slocum' in self.options:
+        if not self.options is None and 'acoustic_profile_slocum' in self.options:
             # For the acoustic profiles, data is 3D data(time, depth).  Time
             # is repeated for n depths, but it still should be monotonically
             # increasing along unique records.
@@ -659,31 +659,24 @@ class GliderCheck(BaseNCCheck):
 
                 test_ctx.assert_true(
                     getattr(ncvar, "long_name", ""),
-                    "attribute {}:long_name must be a non-empty string".format(
-                        qartod_var,
-                    ),
+                    f"attribute {qartod_var}:long_name must be a non-empty string",
                 )
 
                 test_ctx.assert_true(
                     getattr(ncvar, "flag_meanings", ""),
-                    "attribute {}:flag_meanings must be a non-empty string".format(
-                        qartod_var,
-                    ),
+                    f"attribute {qartod_var}:flag_meanings must be a non-empty string",
                 )
 
                 test_ctx.assert_true(
                     isinstance(flag_values, np.ndarray),
-                    "attribute {}:flag_values must be defined as an array of bytes".format(
-                        qartod_var,
-                    ),
+                    f"attribute {qartod_var}:flag_values must be defined as an array of bytes",
                 )
 
                 if isinstance(flag_values, np.ndarray):
                     dtype = flag_values.dtype
                     test_ctx.assert_true(
                         util.compare_dtype(dtype, np.dtype("|i1")),
-                        "attribute {}:flag_values has an illegal data-type, must "
-                        "be byte".format(qartod_var),
+                        f"attribute {qartod_var}:flag_values has an illegal data-type, must be byte",
                     )
 
                 valid_min_dtype = getattr(valid_min, "dtype", None)
@@ -722,8 +715,7 @@ class GliderCheck(BaseNCCheck):
                     score += int(test)
                     if not test:
                         msg = (
-                            "Invalid ancillary_variables attribute for {}, "
-                            "{} is not a variable".format(var, acv)
+                            f"Invalid ancillary_variables attribute for {var}, {acv} is not a variable"
                         )
                         messages.append(msg)
 
@@ -775,8 +767,7 @@ class GliderCheck(BaseNCCheck):
             if valid_min is not None:
                 test_ctx.assert_true(
                     util.compare_dtype(np.dtype(valid_min_dtype), ncvar.dtype),
-                    "{}:valid_min has a different data type, {}, than variable {}, "
-                    "{}".format(var_name, valid_min_dtype, var_name, str(ncvar.dtype)),
+                    f"{var_name}:valid_min has a different data type, {valid_min_dtype}, than variable {var_name}, {str(ncvar.dtype)}"
                 )
 
         return test_ctx.to_result()
@@ -803,8 +794,7 @@ class GliderCheck(BaseNCCheck):
             if valid_max is not None:
                 test_ctx.assert_true(
                     util.compare_dtype(np.dtype(valid_max_dtype), ncvar.dtype),
-                    "{}:valid_max has a different data type, {}, than variable {} "
-                    "{}".format(var_name, valid_max_dtype, str(ncvar.dtype), var_name),
+                    f"{var_name}:valid_max has a different data type, {valid_max_dtype}, than variable {str(ncvar.dtype)} {var_name}"
                 )
 
         return test_ctx.to_result()
@@ -928,42 +918,27 @@ class GliderCheck(BaseNCCheck):
 
                 for var_name in var_name_set:
                     if var_name not in dataset.variables:
-                        msg = "Referenced {} variable {} does not exist".format(
-                            global_att_name,
-                            var_name,
-                        )
+                        msg = f"Referenced {global_att_name} variable {var_name} does not exist"
                         test_ctx.assert_true(False, msg)
                         continue
 
                     var = dataset.variables[var_name]
                     # have to use .ncattrs, hangs if using `in var` ?
                     var_attr_exists = var_remap[global_att_name] in var.ncattrs()
-                    msg = "Attribute {} should exist in variable {}".format(
-                        var_remap[global_att_name],
-                        var_name,
-                    )
+                    msg = f"Attribute {var_remap[global_att_name]} should exist in variable {var_name}"
                     test_ctx.assert_true(var_attr_exists, msg)
 
                     if not var_attr_exists:
                         continue
                     search_attr = getattr(var, var_remap[global_att_name])
 
-                    msg = "Attribute {} '{}' for variable {} not contained in {} authority table".format(
-                        var_remap[global_att_name],
-                        search_attr,
-                        var_name,
-                        global_att_name,
-                    )
+                    msg = f"Attribute {var_remap[global_att_name]} '{search_attr}' for variable {var_name} not contained in {global_att_name} authority table"
                     test_ctx.assert_true(search_attr in check_set, msg)
 
             else:
                 # check for global attribute existence already handled above
                 global_att_value = getattr(dataset, global_att_name)
-                msg = "Global attribute {} value '{}' not contained in {} authority table".format(
-                    global_att_name,
-                    global_att_value,
-                    global_att_name,
-                )
+                msg = f"Global attribute {global_att_name} value '{global_att_value}' not contained in {global_att_name} authority table"
                 test_ctx.assert_true(global_att_value in check_set, msg)
 
         return test_ctx.to_result()
