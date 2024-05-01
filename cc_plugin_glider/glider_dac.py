@@ -456,7 +456,7 @@ class GliderCheck(BaseNCCheck):
         """
         # shouldn't this already be handled by CF trajectory featureType?
         test_ctx = TestCtx(BaseCheck.HIGH, "Profile data is valid")
-        if 'acoustic_profile_slocum' in self.options:
+        if not self.options is None and 'acoustic_profile_slocum' in self.options:
             # For the acoustic profiles, data is 3D data(time, depth).  Time
             # is repeated for n depths, but it still should be monotonically
             # increasing along unique records.
@@ -676,8 +676,7 @@ class GliderCheck(BaseNCCheck):
                     dtype = flag_values.dtype
                     test_ctx.assert_true(
                         util.compare_dtype(dtype, np.dtype("|i1")),
-                        f"attribute {qartod_var}:flag_values has an illegal data-type, must "
-                        "be byte",
+                        f"attribute {qartod_var}:flag_values has an illegal data-type, must be byte",
                     )
 
                 valid_min_dtype = getattr(valid_min, "dtype", None)
@@ -716,8 +715,7 @@ class GliderCheck(BaseNCCheck):
                     score += int(test)
                     if not test:
                         msg = (
-                            f"Invalid ancillary_variables attribute for {var}, "
-                            f"{acv} is not a variable"
+                            f"Invalid ancillary_variables attribute for {var}, {acv} is not a variable"
                         )
                         messages.append(msg)
 
@@ -769,8 +767,7 @@ class GliderCheck(BaseNCCheck):
             if valid_min is not None:
                 test_ctx.assert_true(
                     util.compare_dtype(np.dtype(valid_min_dtype), ncvar.dtype),
-                    f"{var_name}:valid_min has a different data type, {valid_min_dtype}, than variable {var_name}, "
-                    f"{str(ncvar.dtype)}",
+                    f"{var_name}:valid_min has a different data type, {valid_min_dtype}, than variable {var_name}, {ncvar.dtype}"
                 )
 
         return test_ctx.to_result()
@@ -797,8 +794,7 @@ class GliderCheck(BaseNCCheck):
             if valid_max is not None:
                 test_ctx.assert_true(
                     util.compare_dtype(np.dtype(valid_max_dtype), ncvar.dtype),
-                    f"{var_name}:valid_max has a different data type, {valid_max_dtype}, than variable {str(ncvar.dtype)} "
-                    f"{var_name}",
+                    f"{var_name}:valid_max has a different data type, {valid_max_dtype}, than variable {ncvar.dtype} {var_name}"
                 )
 
         return test_ctx.to_result()
