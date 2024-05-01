@@ -158,18 +158,6 @@ class GliderCheck(BaseNCCheck):
             "instrument_ctd",
         ]
 
-        if 'acoustic_profile_slocum' in self.options:
-            required_variables.remove('pressure')
-            required_variables.remove('temperature')
-            required_variables.remove('conductivity')
-            required_variables.remove('density')
-
-        if 'acoustic_metrics_slocum' in self.options:
-            required_variables.remove('depth')
-            required_variables.remove('u')
-            required_variables.remove('v')
-            required_variables.remove('instrument_ctd')
-
         level = BaseCheck.HIGH
         out_of = len(required_variables)
         score = 0
@@ -456,19 +444,10 @@ class GliderCheck(BaseNCCheck):
         """
         # shouldn't this already be handled by CF trajectory featureType?
         test_ctx = TestCtx(BaseCheck.HIGH, "Profile data is valid")
-        if not self.options is None and 'acoustic_profile_slocum' in self.options:
-            # For the acoustic profiles, data is 3D data(time, depth).  Time
-            # is repeated for n depths, but it still should be monotonically
-            # increasing along unique records.
-            test_ctx.assert_true(
-                np.all(np.diff(np.unique(ds.variables["time"])) > 0),
-                "Time variable is not monotonically increasing",
-            )
-        else:
-            test_ctx.assert_true(
-                np.all(np.diff(ds.variables["time"]) > 0),
-                "Time variable is not monotonically increasing",
-            )
+        test_ctx.assert_true(
+            np.all(np.diff(ds.variables["time"]) > 0),
+            "Time variable is not monotonically increasing",
+        )
         return test_ctx.to_result()
 
     def check_dim_no_data(self, dataset):
