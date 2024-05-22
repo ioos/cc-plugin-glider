@@ -2,7 +2,7 @@
 cc_plugin_glider.glider_dac.py
 
 Compliance Test Suite for the IOOS National Glider Data Assembly Center
-https://github.com/ioos/ioosngdac/wiki
+https://ioos.github.io/glider-dac/
 """
 
 import os
@@ -26,7 +26,7 @@ class GliderCheck(BaseNCCheck):
     _cc_spec_version = "3.0"
     _cc_checker_version = __version__
     _cc_url = (
-        "https://ioos.github.io/glider-dac/ngdac-netcdf-file-format-version-2"
+        "https://ioos.github.io/glider-dac/ngdac-netcdf-file-format-version-2.html"
     )
     _cc_display_headers = {3: "Required", 2: "Recommended", 1: "Suggested"}
     acceptable_platform_types = {"Seaglider", "Spray Glider", "Slocum Glider"}
