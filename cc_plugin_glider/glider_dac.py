@@ -653,8 +653,7 @@ class GliderCheck(BaseNCCheck):
                     dtype = flag_values.dtype
                     test_ctx.assert_true(
                         util.compare_dtype(dtype, np.dtype("|i1")),
-                        f"attribute {qartod_var}:flag_values has an illegal data-type, must "
-                        "be byte",
+                        f"attribute {qartod_var}:flag_values has an illegal data-type, must be byte",
                     )
 
                 valid_min_dtype = getattr(valid_min, "dtype", None)
@@ -692,10 +691,7 @@ class GliderCheck(BaseNCCheck):
                     test = acv in dataset.variables
                     score += int(test)
                     if not test:
-                        msg = (
-                            f"Invalid ancillary_variables attribute for {var}, "
-                            f"{acv} is not a variable"
-                        )
+                        msg = f"Invalid ancillary_variables attribute for {var}, {acv} is not a variable"
                         messages.append(msg)
 
         return self.make_result(level, score, out_of, "Ancillary Variables", messages)
@@ -746,8 +742,7 @@ class GliderCheck(BaseNCCheck):
             if valid_min is not None:
                 test_ctx.assert_true(
                     util.compare_dtype(np.dtype(valid_min_dtype), ncvar.dtype),
-                    f"{var_name}:valid_min has a different data type, {valid_min_dtype}, than variable {var_name}, "
-                    f"{str(ncvar.dtype)}",
+                    f"{var_name}:valid_min has a different data type, {valid_min_dtype}, than variable {var_name}, {ncvar.dtype}",
                 )
 
         return test_ctx.to_result()
