@@ -41,7 +41,7 @@ def _check_dtype(dataset, var_name):
         if not compare_dtype(var.dtype, np.dtype(expected_dtype)):
             messages.append(
                 f"Variable {var_name} is expected to have a dtype of "
-                f"{var.dtype}, instead has a dtype of {expected_dtype}"
+                f"{expected_dtype}, instead has a dtype of {var.dtype}"
                 "",
             )
             score -= 1
