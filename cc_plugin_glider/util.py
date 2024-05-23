@@ -1,6 +1,7 @@
 """
 cc_plugin_glider/util.py
 """
+
 from operator import eq
 
 import numpy as np
@@ -115,7 +116,7 @@ def _check_variable_attrs(dataset, var_name, required_attributes=None, options=N
                         score -= 1
                 else:
                     messages.append(
-                        f"Variable {var_name} attribute {attr} must be {check_attrs[attr]}"
+                        f"Variable {var_name} attribute {attr} must be {check_attrs[attr]}",
                     )
                     score -= 1
         else:

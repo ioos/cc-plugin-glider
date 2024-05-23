@@ -1,6 +1,7 @@
 """
 cc_plugin_glider/tests/test_glidercheck.py
 """
+
 import os
 import unittest
 from urllib.parse import urljoin
