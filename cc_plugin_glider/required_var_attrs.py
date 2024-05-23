@@ -5,6 +5,7 @@ Dictionary of required variables and their attributes
 
 Attributes with values set to None mean we only check that the attribute exists, not whether the value matches
 """
+
 required_var_attrs = {
     "time": {
         "dtype": "f8",

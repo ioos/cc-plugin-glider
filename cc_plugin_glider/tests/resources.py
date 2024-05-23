@@ -1,6 +1,7 @@
 """
 cc_plugin_glider/tests/resources.py
 """
+
 import importlib
 import subprocess
 
