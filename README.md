@@ -1,6 +1,6 @@
 # GliderDAC Compliance Checker Plugin
 
-[![Build Status](https://travis-ci.org/ioos/cc-plugin-glider.svg?branch=master)](https://travis-ci.org/ioos/cc-plugin-glider)
+[![Tests](https://github.com/ioos/cc-plugin-glider/actions/workflows/tests.yml/badge.svg)](https://github.com/ioos/cc-plugin-glider/actions/workflows/tests.yml)
 
 This [ioos/compliance-checker](https://github.com/ioos/compliance-checker) plugin supports the following sources and standards:
 
