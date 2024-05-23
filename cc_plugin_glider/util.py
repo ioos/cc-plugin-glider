@@ -74,7 +74,7 @@ def _check_variable_attrs(dataset, var_name, required_attributes=None, options=N
 
     # Get the expected attrs to check
     check_attrs = required_attributes or required_var_attrs.get(var_name, {})
-    if not options is None:
+    if options is not None:
         if "ancillary_variables" in check_attrs and "no_ancillary_variables" in options:
             del check_attrs["ancillary_variables"]
     var_attrs = set(var.ncattrs())
