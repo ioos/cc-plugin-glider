@@ -58,7 +58,7 @@ def _check_dtype(dataset, var_name):
     return (score, out_of, messages)
 
 
-def _check_variable_attrs(dataset, var_name, required_attributes=None):
+def _check_variable_attrs(dataset, var_name, required_attributes=None, options=None):
     """
     Convenience method to check a variable attributes based on the
     expected_vars dict
@@ -74,6 +74,13 @@ def _check_variable_attrs(dataset, var_name, required_attributes=None):
 
     # Get the expected attrs to check
     check_attrs = required_attributes or required_var_attrs.get(var_name, {})
+    ignore_attributes = _get_option('ignore_attributes', options)
+
+    if ignore_attributes is not None:
+        for attr in ignore_attributes:
+            if attr in check_attrs:
+                del check_attrs[attr]
+
     var_attrs = set(var.ncattrs())
     for attr in check_attrs:
         if attr == "dtype":
@@ -126,3 +133,49 @@ def _check_variable_attrs(dataset, var_name, required_attributes=None):
                 pass
 
     return (score, out_of, messages)
+
+def _have_option(needle, option_haystack):
+    """
+    Helper function to determine if a user requested a specific
+    option.
+
+    Returns: True if an option was present, otherwise False
+    """
+
+    # Do the quick short-circuit fast test
+    if needle in option_haystack:
+        return True
+
+    # There may be a more complex option argument passed
+    # ignore_attribute:one,two,three
+    for straw in option_haystack:
+        if straw.startswith(needle):
+            return True
+
+    return False
+
+def _get_option(needle, option_haystack):
+    """
+    Helper function to retrieve a user requested a specific
+    option.
+
+    Returns:
+      if found a list():
+        [needle] or if ignore_attributes:dis,and,dat => [dis, and, dat]
+      if not found, None
+    """
+
+    # Do the quick short-circuit tests first
+    if option_haystack is None:
+        return None
+
+    if needle in option_haystack:
+        return list(needle)
+
+    # There may be a more complex option argument passed
+    # ignore_attribute:one,two,three
+    for straw in option_haystack:
+        if straw.startswith(needle):
+            return straw.split(":")[1].split(",")
+
+    return None
