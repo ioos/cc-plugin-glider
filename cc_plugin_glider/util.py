@@ -74,10 +74,10 @@ def _check_variable_attrs(dataset, var_name, required_attributes=None, options=N
 
     # Get the expected attrs to check
     check_attrs = required_attributes or required_var_attrs.get(var_name, {})
-    skip_attributes = _get_option('skip_attributes', options)
+    ignore_attributes = _get_option('ignore_attributes', options)
 
-    if skip_attributes is not None:
-        for attr in skip_attributes:
+    if ignore_attributes is not None:
+        for attr in ignore_attributes:
             if attr in check_attrs:
                 del check_attrs[attr]
 
@@ -147,7 +147,7 @@ def _have_option(needle, option_haystack):
         return True
 
     # There may be a more complex option argument passed
-    # skip_attribute:one,two,three
+    # ignore_attribute:one,two,three
     for straw in option_haystack:
         if straw.startswith(needle):
             return True
@@ -161,7 +161,7 @@ def _get_option(needle, option_haystack):
 
     Returns:
       if found a list():
-        [needle] or if skip_attributes:dis,and,dat => [dis, and, dat]
+        [needle] or if ignore_attributes:dis,and,dat => [dis, and, dat]
       if not found, None
     """
 
@@ -173,7 +173,7 @@ def _get_option(needle, option_haystack):
         return list(needle)
 
     # There may be a more complex option argument passed
-    # skip_attribute:one,two,three
+    # ignore_attribute:one,two,three
     for straw in option_haystack:
         if straw.startswith(needle):
             return straw.split(":")[1].split(",")

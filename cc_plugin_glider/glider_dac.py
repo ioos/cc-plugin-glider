@@ -254,7 +254,15 @@ class GliderCheck(BaseNCCheck):
     def check_ctd_variable_attributes(self, dataset):
         """
         Verifies that the CTD Variables are the correct data type and contain
-        the correct metadata
+        the correct metadata.
+
+        For datasets without QARTOD flags, the option
+
+        -O gliderdac:ignore_attributes:auxillary_variables
+
+        may be used to avoid checker warnings about missing
+        auxillary_variables but still allows the CTD variables
+        and attributes to be checked against respective formats.
         """
         level = BaseCheck.HIGH
         out_of = 0
