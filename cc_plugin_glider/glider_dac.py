@@ -32,7 +32,10 @@ class GliderCheck(BaseNCCheck):
     acceptable_platform_types = {"Seaglider", "Spray Glider", "Slocum Glider"}
 
     def __init__(self, options=None):
-        # Pass through testing options for gliderdac
+        """
+        Takes a set of options.
+        """
+
         self.options = options
         # try to get the sea names table
         ncei_base_table_url = "https://gliders.ioos.us/ncei_authority_tables/"
@@ -194,6 +197,14 @@ class GliderCheck(BaseNCCheck):
         """
         Validates that lat and lon have correct attributes
 
+        For datasets without QARTOD flags, the option
+
+        -o gliderdac:ignore_attributes:auxillary_variables
+
+        may be used to avoid checker warnings about missing
+        auxillary_variables but still allows other checks
+        to continue against repective formats.
+
         TODO: Does this need to be its own check? Is it high priority?
         """
         level = BaseCheck.HIGH
@@ -203,7 +214,11 @@ class GliderCheck(BaseNCCheck):
 
         check_vars = ["lat", "lon"]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var, options=self.options)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -228,7 +243,15 @@ class GliderCheck(BaseNCCheck):
 
     def check_pressure_depth_attributes(self, dataset):
         """
-        Verifies that the pressure coordinate/data variable is correct
+        Verifies that the pressure coordinate/data variable is correct.
+
+        For datasets without QARTOD flags, the option
+
+        -o gliderdac:ignore_attributes:auxillary_variables
+
+        may be used to avoid checker warnings about missing
+        auxillary_variables but still allows other checks
+        to continue against repective formats.
         """
 
         level = BaseCheck.HIGH
@@ -238,7 +261,11 @@ class GliderCheck(BaseNCCheck):
 
         check_vars = ["pressure", "depth"]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var, options=self.options)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -261,8 +288,8 @@ class GliderCheck(BaseNCCheck):
         -O gliderdac:ignore_attributes:auxillary_variables
 
         may be used to avoid checker warnings about missing
-        auxillary_variables but still allows the CTD variables
-        and attributes to be checked against respective formats.
+        auxillary_variables but still allows other checks
+        to continue against repective formats.
         """
         level = BaseCheck.HIGH
         out_of = 0
@@ -271,7 +298,11 @@ class GliderCheck(BaseNCCheck):
 
         check_vars = ["temperature", "conductivity", "salinity", "density"]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var, options=self.options)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -280,7 +311,15 @@ class GliderCheck(BaseNCCheck):
     def check_profile_variable_attributes_and_types(self, dataset):
         """
         Verifies that the profile variables are the of the correct data type
-        and contain the correct metadata
+        and contain the correct metadata.
+
+        For datasets without QARTOD flags, the option
+
+        -O gliderdac:ignore_attributes:auxillary_variables
+
+        may be used to avoid checker warnings about missing
+        auxillary_variables but still allows other checks
+        to continue against repective formats.
         """
 
         level = BaseCheck.HIGH
@@ -299,7 +338,11 @@ class GliderCheck(BaseNCCheck):
             "v",
         ]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var, options=self.options)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -594,6 +637,14 @@ class GliderCheck(BaseNCCheck):
         """
         Verifies that the dimensionless container variables are the correct
         data type and contain the required metadata
+
+        For datasets without QARTOD flags, the option
+
+        -O gliderdac:ignore_attributes:auxillary_variables
+
+        may be used to avoid checker warnings about missing
+        auxillary_variables but still allows other checks
+        to continue against repective formats.
         """
 
         level = BaseCheck.MEDIUM
@@ -606,7 +657,11 @@ class GliderCheck(BaseNCCheck):
             "instrument_ctd",
         ]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var, options=self.options)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -637,7 +692,17 @@ class GliderCheck(BaseNCCheck):
 
                 ncvar = dataset.variables[qartod_var]
                 valid_min = getattr(ncvar, "valid_min", None)
+                if valid_min is None:
+                    test_ctx.assert_true(
+                        False,
+                        "valid_min attribute for longitude should be defined",
+                    )
                 valid_max = getattr(ncvar, "valid_max", None)
+                if valid_min is None:
+                    test_ctx.assert_true(
+                        False,
+                        "valid_max attribute for longitude should be defined",
+                    )
                 flag_values = getattr(ncvar, "flag_values", None)
                 test_ctx.assert_true(
                     getattr(ncvar, "_FillValue", None) == np.int8(9),
