@@ -203,7 +203,11 @@ class GliderCheck(BaseNCCheck):
 
         check_vars = ["lat", "lon"]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var, options=self.options)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -238,7 +242,11 @@ class GliderCheck(BaseNCCheck):
 
         check_vars = ["pressure", "depth"]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var, options=self.options)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -263,7 +271,11 @@ class GliderCheck(BaseNCCheck):
 
         check_vars = ["temperature", "conductivity", "salinity", "density"]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var, options=self.options)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -291,7 +303,11 @@ class GliderCheck(BaseNCCheck):
             "v",
         ]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var, options=self.options)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -598,7 +614,11 @@ class GliderCheck(BaseNCCheck):
             "instrument_ctd",
         ]
         for var in check_vars:
-            stat, num_checks, msgs = util._check_variable_attrs(dataset, var, options=self.options)
+            stat, num_checks, msgs = util._check_variable_attrs(
+                dataset,
+                var,
+                options=self.options,
+            )
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
@@ -693,9 +713,7 @@ class GliderCheck(BaseNCCheck):
                     test = acv in dataset.variables
                     score += int(test)
                     if not test:
-                        msg = (
-                            f"Invalid ancillary_variables attribute for {var}, {acv} is not a variable"
-                        )
+                        msg = f"Invalid ancillary_variables attribute for {var}, {acv} is not a variable"
                         messages.append(msg)
 
         return self.make_result(level, score, out_of, "Ancillary Variables", messages)
@@ -746,7 +764,7 @@ class GliderCheck(BaseNCCheck):
             if valid_min is not None:
                 test_ctx.assert_true(
                     util.compare_dtype(np.dtype(valid_min_dtype), ncvar.dtype),
-                    f"{var_name}:valid_min has a different data type, {valid_min_dtype}, than variable {var_name}, {ncvar.dtype}"
+                    f"{var_name}:valid_min has a different data type, {valid_min_dtype}, than variable {var_name}, {ncvar.dtype}",
                 )
 
         return test_ctx.to_result()
@@ -773,7 +791,7 @@ class GliderCheck(BaseNCCheck):
             if valid_max is not None:
                 test_ctx.assert_true(
                     util.compare_dtype(np.dtype(valid_max_dtype), ncvar.dtype),
-                    f"{var_name}:valid_max has a different data type, {valid_max_dtype}, than variable {ncvar.dtype} {var_name}"
+                    f"{var_name}:valid_max has a different data type, {valid_max_dtype}, than variable {ncvar.dtype} {var_name}",
                 )
 
         return test_ctx.to_result()
