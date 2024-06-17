@@ -74,7 +74,7 @@ def _check_variable_attrs(dataset, var_name, required_attributes=None, options=N
 
     # Get the expected attrs to check
     check_attrs = required_attributes or required_var_attrs.get(var_name, {})
-    ignore_attributes = _get_option('ignore_attributes', options)
+    ignore_attributes = _get_option("ignore_attributes", options)
 
     if ignore_attributes is not None:
         for attr in ignore_attributes:
@@ -134,6 +134,7 @@ def _check_variable_attrs(dataset, var_name, required_attributes=None, options=N
 
     return (score, out_of, messages)
 
+
 def _have_option(needle, option_haystack):
     """
     Helper function to determine if a user requested a specific
@@ -153,6 +154,7 @@ def _have_option(needle, option_haystack):
             return True
 
     return False
+
 
 def _get_option(needle, option_haystack):
     """
