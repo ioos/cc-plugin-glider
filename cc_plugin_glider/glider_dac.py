@@ -203,7 +203,7 @@ class GliderCheck(BaseNCCheck):
 
         may be used to avoid checker warnings about missing
         auxillary_variables but still allows other checks
-        to continue against repective formats.
+        to continue against respective formats.
 
         TODO: Does this need to be its own check? Is it high priority?
         """
@@ -251,7 +251,7 @@ class GliderCheck(BaseNCCheck):
 
         may be used to avoid checker warnings about missing
         auxillary_variables but still allows other checks
-        to continue against repective formats.
+        to continue against respective formats.
         """
 
         level = BaseCheck.HIGH
@@ -289,7 +289,7 @@ class GliderCheck(BaseNCCheck):
 
         may be used to avoid checker warnings about missing
         auxillary_variables but still allows other checks
-        to continue against repective formats.
+        to continue against respective formats.
         """
         level = BaseCheck.HIGH
         out_of = 0
@@ -301,7 +301,7 @@ class GliderCheck(BaseNCCheck):
             stat, num_checks, msgs = util._check_variable_attrs(
                 dataset,
                 var,
-                options=self.options
+                options=self.options,
             )
             score += int(stat)
             out_of += num_checks
@@ -319,7 +319,7 @@ class GliderCheck(BaseNCCheck):
 
         may be used to avoid checker warnings about missing
         auxillary_variables but still allows other checks
-        to continue against repective formats.
+        to continue against respective formats.
         """
 
         level = BaseCheck.HIGH
@@ -644,7 +644,7 @@ class GliderCheck(BaseNCCheck):
 
         may be used to avoid checker warnings about missing
         auxillary_variables but still allows other checks
-        to continue against repective formats.
+        to continue against respective formats.
         """
 
         level = BaseCheck.MEDIUM
@@ -677,7 +677,7 @@ class GliderCheck(BaseNCCheck):
             "qartod_{}_climatological_flag",
             "qartod_{}_flat_line_flag",
             "qartod_{}_gross_range_flag",
-            "qartod_{}_rate_of_chagne_flag",
+            "qartod_{}_rate_of_change_flag",
             "qartod_{}_spike_flag",
         ]
 
