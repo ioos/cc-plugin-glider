@@ -44,6 +44,6 @@ jobs:
     - name: Test latest compliance-checker
       if: matrix.experimental == true
       run: >
-        micromamba remove compliance-checker --no-prune --yes
+        micromamba remove compliance-checker --no-prune-deps --yes
         && pip install git+https://github.com/ioos/compliance-checker.git --no-deps
         && python -m pytest -rxs --pyargs cc_plugin_glider
