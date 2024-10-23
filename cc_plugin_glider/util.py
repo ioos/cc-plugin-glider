@@ -18,7 +18,12 @@ def compare_dtype(dt1, dt2):
     """
     # string types map directly to Python string.  Decompose into numpy types
     # otherwise
-    return eq(*(dt if dt == str else dt.kind + str(dt.itemsize) for dt in (dt1, dt2)))
+    return eq(
+        *(
+            dt if dt == str else dt.kind + str(dt.itemsize)
+            for dt in (dt1, dt2)
+        ),
+    )
 
 
 def _check_dtype(dataset, var_name):
@@ -58,7 +63,12 @@ def _check_dtype(dataset, var_name):
     return (score, out_of, messages)
 
 
-def _check_variable_attrs(dataset, var_name, required_attributes=None, options=None):
+def _check_variable_attrs(
+    dataset,
+    var_name,
+    required_attributes=None,
+    options=None,
+):
     """
     Convenience method to check a variable attributes based on the
     expected_vars dict
