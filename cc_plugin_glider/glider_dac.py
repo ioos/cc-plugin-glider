@@ -25,9 +25,7 @@ class GliderCheck(BaseNCCheck):
     _cc_spec = "gliderdac"
     _cc_spec_version = "3.0"
     _cc_checker_version = __version__
-    _cc_url = (
-        "https://ioos.github.io/glider-dac/ngdac-netcdf-file-format-version-2.html"
-    )
+    _cc_url = "https://ioos.github.io/glider-dac/ngdac-netcdf-file-format-version-2.html"
     _cc_display_headers = {3: "Required", 2: "Recommended", 1: "Suggested"}
     acceptable_platform_types = {"Seaglider", "Spray Glider", "Slocum Glider"}
 
@@ -59,9 +57,7 @@ class GliderCheck(BaseNCCheck):
             )
 
         # handle NCEI sea names table
-        sea_names_url = (
-            "https://www.ncei.noaa.gov/data/oceans/ncei/vocabulary/seanames.xml"
-        )
+        sea_names_url = "https://www.ncei.noaa.gov/data/oceans/ncei/vocabulary/seanames.xml"
 
         def sea_name_parse(text):
             """Helper function to handle utf-8 parsing of sea name XML table"""
@@ -105,7 +101,10 @@ class GliderCheck(BaseNCCheck):
         try:
             return fn(text_contents)
         except Exception as e:
-            warnings.warn(f"Could not deserialize input text: {str(e)}", stacklevel=2)
+            warnings.warn(
+                f"Could not deserialize input text: {str(e)}",
+                stacklevel=2,
+            )
             return None
 
     cf_checks = CF1_6Check()
@@ -170,7 +169,13 @@ class GliderCheck(BaseNCCheck):
             score += int(test)
             if not test:
                 messages.append(f"Variable {variable} is missing")
-        return self.make_result(level, score, out_of, "Required Variables", messages)
+        return self.make_result(
+            level,
+            score,
+            out_of,
+            "Required Variables",
+            messages,
+        )
 
     def check_dimensions(self, dataset):
         """
@@ -191,7 +196,13 @@ class GliderCheck(BaseNCCheck):
             score += int(test)
             if not test:
                 messages.append(f"{dimension} is not a valid dimension")
-        return self.make_result(level, score, out_of, "Required Dimensions", messages)
+        return self.make_result(
+            level,
+            score,
+            out_of,
+            "Required Dimensions",
+            messages,
+        )
 
     def check_lat_lon_attributes(self, dataset):
         """
@@ -239,7 +250,13 @@ class GliderCheck(BaseNCCheck):
         level = BaseCheck.HIGH
         score, out_of, messages = util._check_variable_attrs(dataset, "time")
 
-        return self.make_result(level, score, out_of, "Time Variable", messages)
+        return self.make_result(
+            level,
+            score,
+            out_of,
+            "Time Variable",
+            messages,
+        )
 
     def check_pressure_depth_attributes(self, dataset):
         """
@@ -306,7 +323,13 @@ class GliderCheck(BaseNCCheck):
             score += int(stat)
             out_of += num_checks
             messages.extend(msgs)
-        return self.make_result(level, score, out_of, "CTD Variables", messages)
+        return self.make_result(
+            level,
+            score,
+            out_of,
+            "CTD Variables",
+            messages,
+        )
 
     def check_profile_variable_attributes_and_types(self, dataset):
         """
@@ -347,7 +370,13 @@ class GliderCheck(BaseNCCheck):
             out_of += num_checks
             messages.extend(msgs)
 
-        return self.make_result(level, score, out_of, "Profile Variables", messages)
+        return self.make_result(
+            level,
+            score,
+            out_of,
+            "Profile Variables",
+            messages,
+        )
 
     def check_global_attributes(self, dataset):
         """
@@ -457,7 +486,10 @@ class GliderCheck(BaseNCCheck):
                 messages.append(
                     (
                         "platform_type {} is not one of the NCEI accepted platforms for archiving: {}"
-                    ).format(platform_type, ",".join(self.acceptable_platform_types)),
+                    ).format(
+                        platform_type,
+                        ",".join(self.acceptable_platform_types),
+                    ),
                 )
         else:
             out_of += 1
@@ -631,7 +663,13 @@ class GliderCheck(BaseNCCheck):
         score += int(pass_stat)
         out_of += num_checks
         messages.extend(attr_msgs)
-        return self.make_result(level, score, out_of, "Trajectory Variable", messages)
+        return self.make_result(
+            level,
+            score,
+            out_of,
+            "Trajectory Variable",
+            messages,
+        )
 
     def check_container_variables(self, dataset):
         """
@@ -666,7 +704,13 @@ class GliderCheck(BaseNCCheck):
             out_of += num_checks
             messages.extend(msgs)
 
-        return self.make_result(level, score, out_of, "Container Variables", messages)
+        return self.make_result(
+            level,
+            score,
+            out_of,
+            "Container Variables",
+            messages,
+        )
 
     def check_qartod(self, dataset):
         """
@@ -760,7 +804,9 @@ class GliderCheck(BaseNCCheck):
         check_vars = dataset.variables
         for var in check_vars:
             if hasattr(dataset.variables[var], "ancillary_variables"):
-                ancillary_variables = dataset.variables[var].ancillary_variables
+                ancillary_variables = dataset.variables[
+                    var
+                ].ancillary_variables
                 for acv in ancillary_variables.split():
                     out_of += 1
                     test = acv in dataset.variables
@@ -769,7 +815,13 @@ class GliderCheck(BaseNCCheck):
                         msg = f"Invalid ancillary_variables attribute for {var}, {acv} is not a variable"
                         messages.append(msg)
 
-        return self.make_result(level, score, out_of, "Ancillary Variables", messages)
+        return self.make_result(
+            level,
+            score,
+            out_of,
+            "Ancillary Variables",
+            messages,
+        )
 
     def check_dtype(self, dataset):
         """
@@ -863,7 +915,10 @@ class GliderCheck(BaseNCCheck):
         Check if the ioos_regional_association attribute exists, if it does check that it's not
         empty
         """
-        test_ctx = TestCtx(BaseCheck.LOW, "IOOS Regional Association Attribute")
+        test_ctx = TestCtx(
+            BaseCheck.LOW,
+            "IOOS Regional Association Attribute",
+        )
 
         ioos_ra = getattr(dataset, "ioos_regional_association", None)
 
@@ -878,7 +933,10 @@ class GliderCheck(BaseNCCheck):
         """
         Check the valid_min and valid max for longitude variable
         """
-        test_ctx = TestCtx(BaseCheck.LOW, "Longitude valid_min valid_max not [-90, 90]")
+        test_ctx = TestCtx(
+            BaseCheck.LOW,
+            "Longitude valid_min valid_max not [-90, 90]",
+        )
 
         if "lon" not in dataset.variables:
             return
@@ -964,7 +1022,8 @@ class GliderCheck(BaseNCCheck):
                 # treat no instruments/platforms defined as an error
                 test_ctx.assert_true(
                     len(var_name_set) > 0,
-                    f"Cannot find any {global_att_name} attributes " "in dataset",
+                    f"Cannot find any {global_att_name} attributes "
+                    "in dataset",
                 )
 
                 for var_name in var_name_set:
@@ -975,7 +1034,9 @@ class GliderCheck(BaseNCCheck):
 
                     var = dataset.variables[var_name]
                     # have to use .ncattrs, hangs if using `in var` ?
-                    var_attr_exists = var_remap[global_att_name] in var.ncattrs()
+                    var_attr_exists = (
+                        var_remap[global_att_name] in var.ncattrs()
+                    )
                     msg = f"Attribute {var_remap[global_att_name]} should exist in variable {var_name}"
                     test_ctx.assert_true(var_attr_exists, msg)
 

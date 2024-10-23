@@ -32,7 +32,9 @@ class TestGliderCheck(unittest.TestCase):
         if name[0] not in ["ion", "pyon"]:
             return f"{name[-1]} ({'.'.join(name[:-1])})"
         else:
-            return f"{name[-1]} ({'.'.join(name[:-2])} : {'.'.join(name[-2:])})"
+            return (
+                f"{name[-1]} ({'.'.join(name[:-2])} : {'.'.join(name[-2:])})"
+            )
 
     __str__ = __repr__
 
@@ -67,14 +69,24 @@ Seabird GPCTD"""
                 urljoin(ncei_base_table_url, "institutions.txt"),
                 text=institutions,
             )
-            mock.get(urljoin(ncei_base_table_url, "projects.txt"), text=projects)
-            mock.get(urljoin(ncei_base_table_url, "platforms.txt"), text=platforms)
+            mock.get(
+                urljoin(ncei_base_table_url, "projects.txt"),
+                text=projects,
+            )
+            mock.get(
+                urljoin(ncei_base_table_url, "platforms.txt"),
+                text=platforms,
+            )
             mock.get(
                 urljoin(ncei_base_table_url, "instruments.txt"),
                 text=instrument_makes,
             )
             with open(
-                os.path.join(os.path.dirname(__file__), "data", "seanames.xml"),
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "data",
+                    "seanames.xml",
+                ),
                 encoding="utf8",
             ) as seanames_file:
                 seanames_content = seanames_file.read()
@@ -117,7 +129,10 @@ Seabird GPCTD"""
         dataset = self.get_dataset(STATIC_FILES["glider_std"])
         self.check.setup(dataset)
         result = self.check.check_ctd_variable_attributes(dataset)
-        self.assertIn("Variable temperature attribute accuracy is empty", result.msgs)
+        self.assertIn(
+            "Variable temperature attribute accuracy is empty",
+            result.msgs,
+        )
 
     def test_global_fail(self):
         """
@@ -293,7 +308,9 @@ Seabird GPCTD"""
         ts.variables["depth"][:] = np.ma.array(np.zeros(500))
         result = self.check.check_depth_array(ts)
         self.assertLess(result.value[0], result.value[1])
-        depth_arr = ts.variables["depth"][:] = np.ma.array(np.linspace(1, 500, 500))
+        depth_arr = ts.variables["depth"][:] = np.ma.array(
+            np.linspace(1, 500, 500),
+        )
         result = self.check.check_depth_array(ts)
         # mark every other value as bad/_FillValue.  Diff should exclude the
         # masked points and result should pass
@@ -388,9 +405,15 @@ Seabird GPCTD"""
         }
         # check that all the missing attribute messages are contained in the
         # test results
-        self.assertTrue(expected_missing_msgs <= set(missing_attr_results.msgs))
+        self.assertTrue(
+            expected_missing_msgs <= set(missing_attr_results.msgs),
+        )
 
         for name in ("institution", "instrument", "platform", "project"):
             self.check.auth_tables[name] = None
 
-        self.assertRaises(RuntimeError, self.check.check_ncei_tables, mock_nc_file)
+        self.assertRaises(
+            RuntimeError,
+            self.check.check_ncei_tables,
+            mock_nc_file,
+        )
