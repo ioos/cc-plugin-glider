@@ -50,7 +50,7 @@ class TestGliderCheck(unittest.TestCase):
     def setUp(self):
         # set up authority tables to prevent needing to fetch resources over
         # network, deal with changes, etc
-        ncei_base_table_url = "https://gliders.ioos.us/ncei_authority_tables/"
+        ncei_base_table_url = "https://www.ncei.noaa.gov/data/oceans/ncei/cfg/ngdac/"
         # this is only a small subset
         institutions = """MARACOOS
 University of Delaware
