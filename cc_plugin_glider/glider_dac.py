@@ -89,7 +89,7 @@ class GliderCheck(BaseNCCheck):
 
         elif backup_resource is None or fail_flag:
             try:
-                resp = requests.get(url, timeout=10)
+                resp = requests.get(url, allow_redirects=True, timeout=10)
                 resp.raise_for_status()
                 text_contents = resp.text
             except RequestException:
