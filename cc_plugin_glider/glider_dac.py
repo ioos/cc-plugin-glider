@@ -36,7 +36,7 @@ class GliderCheck(BaseNCCheck):
 
         self.options = options
         # try to get the sea names table
-        ncei_base_table_url = "https://gliders.ioos.us/ncei_authority_tables/"
+        ncei_base_table_url = "https://www.ncei.noaa.gov/data/oceans/ncei/cfg/ngdac/"
         # might refactor if the authority tables names change
         table_type = {
             "project": "projects.txt",
