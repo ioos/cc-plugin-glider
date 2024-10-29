@@ -36,7 +36,7 @@ class GliderCheck(BaseNCCheck):
 
         self.options = options
         # try to get the sea names table
-        ncei_base_table_url = "https://gliders.ioos.us/ncei_authority_tables/"
+        ncei_base_table_url = "https://www.ncei.noaa.gov/data/oceans/ncei/cfg/ngdac/"
         # might refactor if the authority tables names change
         table_type = {
             "project": "projects.txt",
@@ -89,7 +89,7 @@ class GliderCheck(BaseNCCheck):
 
         elif backup_resource is None or fail_flag:
             try:
-                resp = requests.get(url, timeout=10)
+                resp = requests.get(url, allow_redirects=True, timeout=10)
                 resp.raise_for_status()
                 text_contents = resp.text
             except RequestException:
