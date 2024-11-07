@@ -23,7 +23,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         # must the the latest one where cf_units is
-        python-version: "3.11"
+        python-version: "3.12"
 
     - name: Get tags
       run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
