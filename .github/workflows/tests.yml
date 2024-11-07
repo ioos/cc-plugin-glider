@@ -1,9 +1,8 @@
-name: Tests
+name: Default Tests
 
 on:
   pull_request:
   push:
-    branches: [main]
 
 jobs:
   run:
@@ -26,19 +25,15 @@ jobs:
         environment-name: TEST
         init-shell: bash
         create-args: >-
-          python=${{ matrix.python-version }} --file requirements.txt --file requirements-dev.txt --channel conda-forge
+          python=${{ matrix.python-version }} pip
+          --file requirements.txt
+          --file requirements-dev.txt
+          --channel conda-forge
 
-    - name: Install cc-plugin-glider
+    - name: Install plugin
       run: |
         python -m pip install -e . --no-deps --force-reinstall
 
     - name: Run tests
       run: |
-        python -m pytest -rxs --pyargs cc_plugin_glider
-
-    - name: Test latest compliance-checker
-      if: matrix.experimental == true
-      run: >
-        micromamba remove compliance-checker --no-prune-deps --yes
-        && pip install git+https://github.com/ioos/compliance-checker.git --no-deps
-        && python -m pytest -rxs --pyargs cc_plugin_glider
+        python -m pytest -rxs --pyargs --pyargs  cc_plugin_glider
