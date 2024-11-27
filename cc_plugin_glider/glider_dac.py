@@ -736,16 +736,28 @@ class GliderCheck(BaseNCCheck):
 
                 ncvar = dataset.variables[qartod_var]
                 valid_min = getattr(ncvar, "valid_min", None)
-                if valid_min is None:
+                # TODO: refactor valid_min/valid_max to put in single
+                # conditional check
+                test_ctx.assert_true(
+                    valid_min is not None,
+                    "valid_min attribute for longitude should be defined",
+                )
+                if valid_min is not None:
+                    valid_min_dtype = getattr(valid_min, "dtype", None)
                     test_ctx.assert_true(
-                        False,
-                        "valid_min attribute for longitude should be defined",
+                        util.compare_dtype(valid_min_dtype, np.dtype("|i1")),
+                        f"attribute {qartod_var}:valid_min must be of type byte",
                     )
                 valid_max = getattr(ncvar, "valid_max", None)
-                if valid_min is None:
+                test_ctx.assert_true(
+                    valid_max is not None,
+                    "valid_max attribute for longitude should be defined",
+                )
+                if valid_max is not None:
+                    valid_max_dtype = getattr(valid_max, "dtype", None)
                     test_ctx.assert_true(
-                        False,
-                        "valid_max attribute for longitude should be defined",
+                        util.compare_dtype(valid_max_dtype, np.dtype("|i1")),
+                        f"attribute {qartod_var}:valid_max must be of type byte",
                     )
                 flag_values = getattr(ncvar, "flag_values", None)
                 test_ctx.assert_true(
@@ -775,17 +787,6 @@ class GliderCheck(BaseNCCheck):
                         f"attribute {qartod_var}:flag_values has an illegal data-type, must be byte",
                     )
 
-                valid_min_dtype = getattr(valid_min, "dtype", None)
-                test_ctx.assert_true(
-                    util.compare_dtype(valid_min_dtype, np.dtype("|i1")),
-                    f"attribute {qartod_var}:valid_min must be of type byte",
-                )
-
-                valid_max_dtype = getattr(valid_max, "dtype", None)
-                test_ctx.assert_true(
-                    util.compare_dtype(valid_max_dtype, np.dtype("|i1")),
-                    f"attribute {qartod_var}:valid_max must be of type byte",
-                )
 
         if test_ctx.out_of == 0:
             return None
