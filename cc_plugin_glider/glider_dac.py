@@ -36,7 +36,9 @@ class GliderCheck(BaseNCCheck):
 
         self.options = options
         # try to get the sea names table
-        ncei_base_table_url = "https://www.ncei.noaa.gov/data/oceans/ncei/cfg/ngdac/"
+        ncei_base_table_url = (
+            "https://www.ncei.noaa.gov/data/oceans/ncei/cfg/ngdac/"
+        )
         # might refactor if the authority tables names change
         table_type = {
             "project": "projects.txt",
@@ -1022,8 +1024,7 @@ class GliderCheck(BaseNCCheck):
                 # treat no instruments/platforms defined as an error
                 test_ctx.assert_true(
                     len(var_name_set) > 0,
-                    f"Cannot find any {global_att_name} attributes "
-                    "in dataset",
+                    f"Cannot find any {global_att_name} attributes in dataset",
                 )
 
                 for var_name in var_name_set:
