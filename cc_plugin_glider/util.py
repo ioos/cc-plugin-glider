@@ -101,7 +101,7 @@ def _check_variable_attrs(
         # Check if the attribute is present
         if attr not in var_attrs:
             messages.append(
-                f"Variable {var_name} must contain attribute: {attr}" "",
+                f"Variable {var_name} must contain attribute: {attr}",
             )
             score -= 1
             continue
@@ -136,7 +136,7 @@ def _check_variable_attrs(
                 att_strip = getattr(var, attr).strip()
                 if not att_strip:
                     messages.append(
-                        f"Variable {var_name} attribute {attr} is empty" "",
+                        f"Variable {var_name} attribute {attr} is empty",
                     )
                     score -= 1
             except AttributeError:
