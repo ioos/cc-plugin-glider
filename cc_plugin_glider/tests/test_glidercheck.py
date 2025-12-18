@@ -50,39 +50,23 @@ class TestGliderCheck(unittest.TestCase):
     def setUp(self):
         # set up authority tables to prevent needing to fetch resources over
         # network, deal with changes, etc
-        ncei_base_table_url = (
-            "https://www.ncei.noaa.gov/data/oceans/ncei/cfg/ngdac/"
-        )
-        # this is only a small subset
-        institutions = """MARACOOS
-University of Delaware
-Woods Hole Oceanographic Institution"""
-
-        projects = "MARACOOS"
-
-        platforms = "Test123"
-
-        instrument_makes = """Seabird GCTD
-Sea-Bird 41CP
-Sea-Bird GCTD
-Seabird GPCTD"""
         with requests_mock.Mocker() as mock:
+            # NCEI metadata content
+            with open(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "data",
+                    "ncei_metadata.xml",
+                ),
+                encoding="utf8",
+            ) as ncei_metadata_file:
+                ncei_metadata_content = ncei_metadata_file.read()
             mock.get(
-                urljoin(ncei_base_table_url, "institutions.txt"),
-                text=institutions,
+                "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.nodc:IOOS-NGDAC;view=xml;responseType=text/xml",
+                text=ncei_metadata_content,
             )
-            mock.get(
-                urljoin(ncei_base_table_url, "projects.txt"),
-                text=projects,
-            )
-            mock.get(
-                urljoin(ncei_base_table_url, "platforms.txt"),
-                text=platforms,
-            )
-            mock.get(
-                urljoin(ncei_base_table_url, "instruments.txt"),
-                text=instrument_makes,
-            )
+
+            # seanames content
             with open(
                 os.path.join(
                     os.path.dirname(__file__),
@@ -356,14 +340,14 @@ Seabird GPCTD"""
         """Tests that the NCEI compliance suite works"""
 
         mock_nc_file = MockTimeSeries()
-        mock_nc_file.project = "MARACOOS"
-        mock_nc_file.institution = "MARACOOS"
+        mock_nc_file.project = "Mid-Atlantic Regional Association Coastal Ocean Observing System (MARACOOS)"
+        mock_nc_file.institution = "National Oceanic and Atmospheric Administration"
         instrument_var = mock_nc_file.createVariable("instrument", "i", ())
-        instrument_var.make_model = "Sea-Bird GCTD"
+        instrument_var.make_model = "sea-bird"
         mock_nc_file.variables["depth"].instrument = "instrument"
         mock_nc_file.variables["depth"].platform = "platform"
         platform_var = mock_nc_file.createVariable("platform", "i", ())
-        platform_var.id = "Test123"
+        platform_var.id = "bill"
 
         result = self.check.check_ncei_tables(mock_nc_file)
         # everything should pass here

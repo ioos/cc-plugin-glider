@@ -44,15 +44,16 @@ class GliderCheck(BaseNCCheck):
         table_type = {
             "project": "NODC PROJECT NAMES THESAURUS",
             "platform": "NODC PLATFORM NAMES THESAURUS",
-            "instrument": "NODC INSTRUMENT NAMES THESAURUS",
+            "instrument": "Provider Instruments",
             "institution": "NODC COLLECTING INSTITUTION NAMES THESAURUS"
         }
 
-        xpath_selector_template = ".//gmd:MD_Keywords[gmd:thesaurusName/gmd:CI_Citation/gmd:title/gco:CharacterString/text()='{}']/gmd:keyword/gmx:Anchor/text()"
+        xpath_selector_template = ".//gmd:MD_Keywords[gmd:thesaurusName/gmd:CI_Citation/gmd:title/gco:CharacterString/text()='{}']/gmd:keyword/{}/text()"
         namespaces = {"gco": "http://www.isotc211.org/2005/gco", "gmd": "http://www.isotc211.org/2005/gmd", "gmx": "http://www.isotc211.org/2005/gmx"}
         self.auth_tables = {}
         for global_att_name, text_content in table_type.items():
-            self.auth_tables[global_att_name] = tree.xpath(xpath_selector_template.format(text_content),
+            text_elem = "gco:CharacterString" if global_att_name == "instrument" else "gmx:Anchor"
+            self.auth_tables[global_att_name] = tree.xpath(xpath_selector_template.format(text_content, text_elem),
                                                            namespaces=namespaces)
         # handle NCEI sea names table
         sea_names_url = "https://www.ncei.noaa.gov/data/oceans/ncei/vocabulary/seanames.xml"
@@ -979,7 +980,7 @@ class GliderCheck(BaseNCCheck):
         # some top level attrs map to other things
         var_remap = {"platform": "id", "instrument": "make_model"}
 
-        for global_att_name, _ in table_type.items():
+        for global_att_name in table_type:
             # instruments have to be handled specially since they aren't
             # global attributes
             if global_att_name not in {"instrument", "platform"}:
