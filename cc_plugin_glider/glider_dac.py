@@ -14,6 +14,7 @@ import requests
 from compliance_checker import __version__
 from compliance_checker.base import BaseCheck, BaseNCCheck, Result, TestCtx
 from compliance_checker.cf.cf import CF1_6Check
+from io import BytesIO
 from lxml import etree
 from requests.exceptions import RequestException
 
@@ -35,29 +36,25 @@ class GliderCheck(BaseNCCheck):
         """
 
         self.options = options
-        # try to get the sea names table
-        ncei_base_table_url = (
-            "https://www.ncei.noaa.gov/data/oceans/ncei/cfg/ngdac/"
-        )
-        # might refactor if the authority tables names change
+        iso_xml_location = "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.nodc:IOOS-NGDAC;view=xml;responseType=text/xml"
+        resp = requests.get(iso_xml_location, timeout=10)
+        resp.raise_for_status()
+
+        tree = etree.parse(BytesIO(resp.content))
         table_type = {
-            "project": "projects.txt",
-            "platform": "platforms.txt",
-            "instrument": "instruments.txt",
-            "institution": "institutions.txt",
+            "project": "NODC PROJECT NAMES THESAURUS",
+            "platform": "NODC PLATFORM NAMES THESAURUS",
+            "instrument": "Provider Instruments",
+            "institution": "NODC COLLECTING INSTITUTION NAMES THESAURUS"
         }
 
+        xpath_selector_template = ".//gmd:MD_Keywords[gmd:thesaurusName/gmd:CI_Citation/gmd:title/gco:CharacterString/text()='{}']/gmd:keyword/{}/text()"
+        namespaces = {"gco": "http://www.isotc211.org/2005/gco", "gmd": "http://www.isotc211.org/2005/gmd", "gmx": "http://www.isotc211.org/2005/gmx"}
         self.auth_tables = {}
-        for global_att_name, table_file in table_type.items():
-            # instruments have to be handled specially since they aren't
-            # global attributes
-            table_loc = urljoin(ncei_base_table_url, table_file)
-            self.auth_tables[global_att_name] = GliderCheck.request_resource(
-                table_loc,
-                os.environ.get(f"{global_att_name.upper()}_TABLE"),
-                lambda s: set(s.splitlines()),
-            )
-
+        for global_att_name, text_content in table_type.items():
+            text_elem = "gco:CharacterString" if global_att_name == "instrument" else "gmx:Anchor"
+            self.auth_tables[global_att_name] = tree.xpath(xpath_selector_template.format(text_content, text_elem),
+                                                           namespaces=namespaces)
         # handle NCEI sea names table
         sea_names_url = "https://www.ncei.noaa.gov/data/oceans/ncei/vocabulary/seanames.xml"
 
@@ -983,7 +980,7 @@ class GliderCheck(BaseNCCheck):
         # some top level attrs map to other things
         var_remap = {"platform": "id", "instrument": "make_model"}
 
-        for global_att_name, _ in table_type.items():
+        for global_att_name in table_type:
             # instruments have to be handled specially since they aren't
             # global attributes
             if global_att_name not in {"instrument", "platform"}:
