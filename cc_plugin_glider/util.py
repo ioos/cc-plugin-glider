@@ -5,7 +5,7 @@ cc_plugin_glider/util.py
 from operator import eq
 
 import numpy as np
-from cf_units import Unit
+from compliance_checker.cfunits import Unit
 
 from cc_plugin_glider.required_var_attrs import required_var_attrs
 
