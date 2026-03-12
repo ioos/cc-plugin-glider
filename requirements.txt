@@ -1,1 +1,1 @@
-compliance-checker>=4.3.2
+compliance-checker>=5.4.1
