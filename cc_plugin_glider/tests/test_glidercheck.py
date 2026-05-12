@@ -4,7 +4,6 @@ cc_plugin_glider/tests/test_glidercheck.py
 
 import os
 import unittest
-from urllib.parse import urljoin
 
 import numpy as np
 import requests_mock
@@ -341,7 +340,9 @@ class TestGliderCheck(unittest.TestCase):
 
         mock_nc_file = MockTimeSeries()
         mock_nc_file.project = "Mid-Atlantic Regional Association Coastal Ocean Observing System (MARACOOS)"
-        mock_nc_file.institution = "National Oceanic and Atmospheric Administration"
+        mock_nc_file.institution = (
+            "National Oceanic and Atmospheric Administration"
+        )
         instrument_var = mock_nc_file.createVariable("instrument", "i", ())
         instrument_var.make_model = "sea-bird"
         mock_nc_file.variables["depth"].instrument = "instrument"
