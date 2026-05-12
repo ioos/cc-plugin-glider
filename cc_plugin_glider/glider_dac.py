@@ -13,7 +13,7 @@ import numpy as np
 import requests
 from compliance_checker import __version__
 from compliance_checker.base import BaseCheck, BaseNCCheck, Result, TestCtx
-from compliance_checker.cf.cf import CF1_6Check
+from compliance_checker.cf import CF1_6Check
 from lxml import etree
 from requests.exceptions import RequestException
 
