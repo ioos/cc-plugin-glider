@@ -7,14 +7,13 @@ https://ioos.github.io/glider-dac/
 
 import os
 import warnings
-from urllib.parse import urljoin
+from io import BytesIO
 
 import numpy as np
 import requests
 from compliance_checker import __version__
 from compliance_checker.base import BaseCheck, BaseNCCheck, Result, TestCtx
 from compliance_checker.cf.cf import CF1_6Check
-from io import BytesIO
 from lxml import etree
 from requests.exceptions import RequestException
 
@@ -45,16 +44,26 @@ class GliderCheck(BaseNCCheck):
             "project": "NODC PROJECT NAMES THESAURUS",
             "platform": "NODC PLATFORM NAMES THESAURUS",
             "instrument": "Provider Instruments",
-            "institution": "NODC COLLECTING INSTITUTION NAMES THESAURUS"
+            "institution": "NODC COLLECTING INSTITUTION NAMES THESAURUS",
         }
 
         xpath_selector_template = ".//gmd:MD_Keywords[gmd:thesaurusName/gmd:CI_Citation/gmd:title/gco:CharacterString/text()='{}']/gmd:keyword/{}/text()"
-        namespaces = {"gco": "http://www.isotc211.org/2005/gco", "gmd": "http://www.isotc211.org/2005/gmd", "gmx": "http://www.isotc211.org/2005/gmx"}
+        namespaces = {
+            "gco": "http://www.isotc211.org/2005/gco",
+            "gmd": "http://www.isotc211.org/2005/gmd",
+            "gmx": "http://www.isotc211.org/2005/gmx",
+        }
         self.auth_tables = {}
         for global_att_name, text_content in table_type.items():
-            text_elem = "gco:CharacterString" if global_att_name == "instrument" else "gmx:Anchor"
-            self.auth_tables[global_att_name] = tree.xpath(xpath_selector_template.format(text_content, text_elem),
-                                                           namespaces=namespaces)
+            text_elem = (
+                "gco:CharacterString"
+                if global_att_name == "instrument"
+                else "gmx:Anchor"
+            )
+            self.auth_tables[global_att_name] = tree.xpath(
+                xpath_selector_template.format(text_content, text_elem),
+                namespaces=namespaces,
+            )
         # handle NCEI sea names table
         sea_names_url = "https://www.ncei.noaa.gov/data/oceans/ncei/vocabulary/seanames.xml"
 
@@ -785,7 +794,6 @@ class GliderCheck(BaseNCCheck):
                         util.compare_dtype(dtype, np.dtype("|i1")),
                         f"attribute {qartod_var}:flag_values has an illegal data-type, must be byte",
                     )
-
 
         if test_ctx.out_of == 0:
             return None
