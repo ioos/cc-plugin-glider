@@ -27,7 +27,7 @@ class GliderCheck(BaseNCCheck):
     _cc_checker_version = __version__
     _cc_url = "https://ioos.github.io/glider-dac/ngdac-netcdf-file-format-version-2.html"
     _cc_display_headers = {3: "Required", 2: "Recommended", 1: "Suggested"}
-    acceptable_platform_types = {"Seaglider", "Spray Glider", "Slocum Glider"}
+    acceptable_platform_types = {"Seaglider", "Spray Glider", "Slocum Glider", "SeaExplorer"}
 
     def __init__(self, options=None):
         """
